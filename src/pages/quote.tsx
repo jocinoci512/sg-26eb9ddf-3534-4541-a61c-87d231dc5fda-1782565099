@@ -38,9 +38,16 @@ export default function Quote() {
     setLoading(true);
 
     try {
+      // Generate unique quote number
+      const date = new Date();
+      const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+      const randomNum = Math.floor(1000 + Math.random() * 9000);
+      const quoteNumber = `QT-${dateStr}-${randomNum}`;
+
       // Save quote to database
       const { error: dbError } = await supabase.from('quotes').insert([
         {
+          quote_number: quoteNumber,
           customer_name: name,
           customer_email: email,
           customer_phone: phone,
