@@ -161,8 +161,8 @@ export default function BlogPost() {
   return (
     <>
       <SEO
-        title={post.meta_title || `${post.title} - Go Cargo Logistics Blog`}
-        description={post.meta_description || post.excerpt}
+        title={post.seo_title || `${post.title} - Go Cargo Logistics Blog`}
+        description={post.seo_description || post.excerpt}
         image={post.featured_image || undefined}
       />
       <Navigation />
