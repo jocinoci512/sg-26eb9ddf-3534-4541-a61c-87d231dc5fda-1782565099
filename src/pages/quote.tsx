@@ -28,6 +28,7 @@ export default function Quote() {
   const [vehicleMake, setVehicleMake] = useState("");
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleYear, setVehicleYear] = useState("");
+  const [preferredPickupDate, setPreferredPickupDate] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -51,9 +52,8 @@ export default function Quote() {
           delivery_city: deliveryCity,
           delivery_state: deliveryState,
           delivery_zip: deliveryZip,
-          shipment_type: shipmentType,
-          vehicle_make: vehicleMake,
-          vehicle_model: vehicleModel,
+          vehicle_make: vehicleMake || null,
+          vehicle_model: vehicleModel || null,
           vehicle_year: vehicleYear ? parseInt(vehicleYear) : null,
           notes,
           status: 'pending',
@@ -102,6 +102,7 @@ export default function Quote() {
       setVehicleMake("");
       setVehicleModel("");
       setVehicleYear("");
+      setPreferredPickupDate("");
       setNotes("");
     } catch (error: any) {
       console.error('Quote form error:', error);
@@ -178,38 +179,106 @@ export default function Quote() {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-bold">Shipment Details</h3>
+                  <h3 className="text-lg font-bold">Pickup Location</h3>
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="pickup_address">Pickup Address *</Label>
-                      <Textarea
+                    <div className="md:col-span-2">
+                      <Label htmlFor="pickup_address">Street Address *</Label>
+                      <Input
                         id="pickup_address"
                         required
                         value={pickupAddress}
                         onChange={(e) => setPickupAddress(e.target.value)}
-                        placeholder="123 Main St, City, State ZIP"
-                        rows={3}
+                        placeholder="123 Main St"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="delivery_address">Delivery Address *</Label>
-                      <Textarea
+                      <Label htmlFor="pickup_city">City *</Label>
+                      <Input
+                        id="pickup_city"
+                        required
+                        value={pickupCity}
+                        onChange={(e) => setPickupCity(e.target.value)}
+                        placeholder="New York"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pickup_state">State *</Label>
+                      <Input
+                        id="pickup_state"
+                        required
+                        value={pickupState}
+                        onChange={(e) => setPickupState(e.target.value)}
+                        placeholder="NY"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pickup_zip">ZIP Code *</Label>
+                      <Input
+                        id="pickup_zip"
+                        required
+                        value={pickupZip}
+                        onChange={(e) => setPickupZip(e.target.value)}
+                        placeholder="10001"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold">Delivery Location</h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <Label htmlFor="delivery_address">Street Address *</Label>
+                      <Input
                         id="delivery_address"
                         required
                         value={deliveryAddress}
                         onChange={(e) => setDeliveryAddress(e.target.value)}
-                        placeholder="456 Oak Ave, City, State ZIP"
-                        rows={3}
+                        placeholder="456 Oak Ave"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="delivery_city">City *</Label>
+                      <Input
+                        id="delivery_city"
+                        required
+                        value={deliveryCity}
+                        onChange={(e) => setDeliveryCity(e.target.value)}
+                        placeholder="Los Angeles"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="delivery_state">State *</Label>
+                      <Input
+                        id="delivery_state"
+                        required
+                        value={deliveryState}
+                        onChange={(e) => setDeliveryState(e.target.value)}
+                        placeholder="CA"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="delivery_zip">ZIP Code *</Label>
+                      <Input
+                        id="delivery_zip"
+                        required
+                        value={deliveryZip}
+                        onChange={(e) => setDeliveryZip(e.target.value)}
+                        placeholder="90001"
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold">Shipment Details</h3>
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="shipment_type">Shipment Type *</Label>
                       <Select
                         required
                         value={shipmentType}
-                        onValueChange={(value) => setShipmentType(value)}
+                        onValueChange={setShipmentType}
                       >
                         <SelectTrigger id="shipment_type">
                           <SelectValue placeholder="Select type" />
@@ -230,15 +299,15 @@ export default function Quote() {
                       <Input
                         id="preferred_pickup_date"
                         type="date"
-                        value={formData.preferred_pickup_date}
-                        onChange={(e) => handleChange('preferred_pickup_date', e.target.value)}
+                        value={preferredPickupDate}
+                        onChange={(e) => setPreferredPickupDate(e.target.value)}
                         min={new Date().toISOString().split('T')[0]}
                       />
                     </div>
                   </div>
                 </div>
 
-                {(formData.shipment_type === 'vehicle_shipping') && (
+                {shipmentType === 'vehicle_shipping' && (
                   <div className="space-y-4">
                     <h3 className="text-lg font-bold">Vehicle Information</h3>
                     <div className="grid md:grid-cols-3 gap-4">
@@ -246,8 +315,8 @@ export default function Quote() {
                         <Label htmlFor="vehicle_make">Make</Label>
                         <Input
                           id="vehicle_make"
-                          value={formData.vehicle_make}
-                          onChange={(e) => handleChange('vehicle_make', e.target.value)}
+                          value={vehicleMake}
+                          onChange={(e) => setVehicleMake(e.target.value)}
                           placeholder="Toyota"
                         />
                       </div>
@@ -255,8 +324,8 @@ export default function Quote() {
                         <Label htmlFor="vehicle_model">Model</Label>
                         <Input
                           id="vehicle_model"
-                          value={formData.vehicle_model}
-                          onChange={(e) => handleChange('vehicle_model', e.target.value)}
+                          value={vehicleModel}
+                          onChange={(e) => setVehicleModel(e.target.value)}
                           placeholder="Camry"
                         />
                       </div>
@@ -264,8 +333,8 @@ export default function Quote() {
                         <Label htmlFor="vehicle_year">Year</Label>
                         <Input
                           id="vehicle_year"
-                          value={formData.vehicle_year}
-                          onChange={(e) => handleChange('vehicle_year', e.target.value)}
+                          value={vehicleYear}
+                          onChange={(e) => setVehicleYear(e.target.value)}
                           placeholder="2020"
                         />
                       </div>
@@ -277,8 +346,8 @@ export default function Quote() {
                   <Label htmlFor="additional_notes">Additional Notes</Label>
                   <Textarea
                     id="additional_notes"
-                    value={formData.additional_notes}
-                    onChange={(e) => handleChange('additional_notes', e.target.value)}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                     placeholder="Any special requirements or additional information..."
                     rows={4}
                   />

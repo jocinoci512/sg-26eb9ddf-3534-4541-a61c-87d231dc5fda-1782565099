@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
@@ -199,16 +200,19 @@ export default function Contact() {
                   className="w-full btn-gradient text-white"
                   disabled={loading}
                 >
-                  {loading ? "Sending..." : "Send Message"}
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" />
+                      Send Message
+                    </>
+                  )}
                 </Button>
               </form>
-
-              {submitted && (
-                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800 font-medium">Thank you for your message!</p>
-                  <p className="text-green-700 text-sm">We'll respond within 24 hours.</p>
-                </div>
-              )}
             </div>
 
             <div>
