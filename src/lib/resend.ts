@@ -314,9 +314,9 @@ async function logEmail(data: {
 }) {
   try {
     const { error } = await supabase.from('email_logs').insert({
-      recipient: data.recipient,
+      recipient_email: data.recipient,
       subject: data.subject,
-      email_id: data.emailId || null,
+      resend_email_id: data.emailId || null,
       status: data.status,
       error_message: data.errorMessage || null,
       sent_at: data.status === 'sent' ? new Date().toISOString() : null,
