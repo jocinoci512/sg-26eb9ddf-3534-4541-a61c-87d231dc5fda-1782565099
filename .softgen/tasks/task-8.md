@@ -10,19 +10,17 @@ position: 8
 ---
 
 ## Notes
-Complete blog system with admin interface for creating/editing posts, categories, tags, featured images. Public blog listing and individual post pages with SEO metadata.
+Blog CMS for publishing logistics articles and company updates. Lower priority - core platform is complete without this feature.
 
 ## Checklist
-- [ ] Create blog listing page with pagination
-- [ ] Build individual blog post page
-- [ ] Add admin blog post editor
-- [ ] Implement category and tag management
+- [ ] Create admin blog post management page
+- [ ] Build blog listing page
+- [ ] Create individual blog post page
+- [ ] Add rich text editor for content
+- [ ] Implement categories and tags
 - [ ] Add featured image upload
-- [ ] Create blog search functionality
-- [ ] Add related posts section
-- [ ] Implement SEO metadata for posts
 
 ## Acceptance
-- Admin can create/edit/delete blog posts
+- Admin can create, edit, delete blog posts
 - Public blog displays all published posts
 - Individual posts show with proper formatting and images
