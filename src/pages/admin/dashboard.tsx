@@ -33,6 +33,7 @@ export default function AdminDashboard() {
     delayedShipments: 0,
   });
   const [recentShipments, setRecentShipments] = useState<any[]>([]);
+  const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -65,6 +66,18 @@ export default function AdminDashboard() {
       });
 
       setRecentShipments(recentRes.data ?? []);
+
+      // Load recent events
+      const { data: eventsData } = await supabase
+        .from('shipment_events')
+        .select(`
+          *,
+          shipments (tracking_number)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      setRecentEvents(eventsData ?? []);
     } catch (err: any) {
       console.error('Dashboard error:', err);
       setError("Failed to load dashboard data");
@@ -222,6 +235,54 @@ export default function AdminDashboard() {
                       <p className="text-sm text-muted-foreground">
                         {new Date(shipment.created_at).toLocaleDateString()}
                       </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentEvents.length === 0 ? (
+              <div className="text-center py-8">
+                <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No recent activity</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentEvents.map((event: any) => (
+                  <div
+                    key={event.id}
+                    className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-sm truncate">
+                            {event.shipments?.tracking_number || 'Unknown'}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{event.event_description}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(event.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                      {event.performed_by_name && (
+                        <p className="text-xs text-muted-foreground">
+                          by {event.performed_by_name}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}

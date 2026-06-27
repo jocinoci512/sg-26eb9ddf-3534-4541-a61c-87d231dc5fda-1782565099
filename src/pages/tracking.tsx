@@ -39,6 +39,7 @@ export default function TrackingPage() {
   const [trackingNumber, setTrackingNumber] = useState("");
   const [shipment, setShipment] = useState<ShipmentWithVehicle | null>(null);
   const [trackingUpdates, setTrackingUpdates] = useState<TrackingUpdate[]>([]);
+  const [shipmentEvents, setShipmentEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -95,6 +96,17 @@ export default function TrackingPage() {
       if (updatesError) throw updatesError;
 
       setTrackingUpdates(updatesData ?? []);
+
+      // Load shipment events (audit trail)
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('shipment_events')
+        .select('*')
+        .eq('shipment_id', shipmentData.id)
+        .order('created_at', { ascending: false });
+
+      if (eventsError) throw eventsError;
+
+      setShipmentEvents(eventsData ?? []);
     } catch (err) {
       console.error('Tracking error:', err);
       setError("An error occurred while searching. Please try again.");
@@ -374,6 +386,47 @@ export default function TrackingPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Shipment Event History */}
+            {shipmentEvents.length > 0 && (
+              <Card className="animate-fade-up [animation-delay:200ms]">
+                <CardHeader>
+                  <CardTitle>Event History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {shipmentEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        className="flex items-start gap-4 p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                      >
+                        <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-1">
+                            <h4 className="font-semibold text-sm">{event.event_description}</h4>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {new Date(event.created_at).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                          {event.performed_by_name && (
+                            <p className="text-xs text-muted-foreground">
+                              by {event.performed_by_name}
+                              {event.performed_by_role && ` (${event.performed_by_role.replace('_', ' ')})`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </section>
       )}
