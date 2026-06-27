@@ -329,7 +329,6 @@ export function ShipmentMap({
                     strokeColor: '#CBD5E1',
                     strokeOpacity: 0.6,
                     strokeWeight: 5,
-                    strokePattern: 'dashed',
                   }}
                 />
               </>

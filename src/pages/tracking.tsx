@@ -319,13 +319,11 @@ export default function TrackingPage() {
                 Live Shipment Tracking
               </h2>
               <ShipmentMap
-                pickupAddress={shipment.pickup_address_line1}
-                pickupCity={shipment.pickup_city}
-                pickupState={shipment.pickup_state}
-                deliveryAddress={shipment.delivery_address_line1}
-                deliveryCity={shipment.delivery_city}
-                deliveryState={shipment.delivery_state}
-                status={shipment.status}
+                pickupAddress={`${shipment.pickup_address_line1}, ${shipment.pickup_city}, ${shipment.pickup_state} ${shipment.pickup_zip_code}`}
+                deliveryAddress={`${shipment.delivery_address_line1}, ${shipment.delivery_city}, ${shipment.delivery_state} ${shipment.delivery_zip_code}`}
+                currentStatus={shipment.status}
+                shipmentType={shipment.shipment_type || 'vehicle'}
+                estimatedDelivery={shipment.estimated_delivery_date || undefined}
               />
             </div>
 
