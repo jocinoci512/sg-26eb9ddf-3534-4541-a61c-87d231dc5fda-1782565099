@@ -3,6 +3,8 @@
  * Production-ready email delivery with retry logic and error handling
  */
 
+import { supabase } from "@/integrations/supabase/client";
+
 interface EmailData {
   to: string;
   subject: string;
@@ -298,4 +300,32 @@ export function generateEmailTemplate(params: EmailTemplateParams): string {
 </body>
 </html>
   `.trim();
+}
+
+/**
+ * Log email to database for tracking
+ */
+async function logEmail(data: {
+  recipient: string;
+  subject: string;
+  emailId?: string;
+  status: 'sent' | 'failed';
+  errorMessage?: string;
+}) {
+  try {
+    const { error } = await supabase.from('email_logs').insert({
+      recipient: data.recipient,
+      subject: data.subject,
+      email_id: data.emailId || null,
+      status: data.status,
+      error_message: data.errorMessage || null,
+      sent_at: data.status === 'sent' ? new Date().toISOString() : null,
+    });
+
+    if (error) {
+      console.error('Failed to log email:', error);
+    }
+  } catch (error) {
+    console.error('Email logging error:', error);
+  }
 }
