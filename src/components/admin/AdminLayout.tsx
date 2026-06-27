@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
+import { GlobalSearch } from "@/components/admin/GlobalSearch";
 import { 
   LayoutDashboard, 
   Package, 
@@ -92,6 +93,20 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
               {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden md:block fixed top-0 left-64 right-0 bg-white border-b z-40 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Admin Portal</h1>
+          <div className="flex items-center gap-4">
+            <GlobalSearch />
+            <NotificationBell />
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Logout
             </Button>
           </div>
         </div>
