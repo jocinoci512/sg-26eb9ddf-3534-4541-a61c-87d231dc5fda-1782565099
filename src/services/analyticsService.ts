@@ -141,13 +141,21 @@ export const analyticsService = {
       });
 
       // Update session pages visited count
-      await supabase
+      const { data: session } = await supabase
         .from('user_sessions')
-        .update({ 
-          pages_visited: supabase.rpc('increment', { x: 1 }),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('session_id', data.sessionId);
+        .select('pages_visited')
+        .eq('session_id', data.sessionId)
+        .single();
+
+      if (session) {
+        await supabase
+          .from('user_sessions')
+          .update({ 
+            pages_visited: (session.pages_visited || 0) + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('session_id', data.sessionId);
+      }
 
     } catch (error) {
       console.error('Track page view error:', error);
