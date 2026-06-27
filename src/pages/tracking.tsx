@@ -316,9 +316,10 @@ export default function TrackingPage() {
             <div className="animate-fade-up [animation-delay:100ms]">
               <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                 <MapPin className="w-6 h-6 text-primary" />
-                Live Shipment Tracking
+                Live GPS Tracking
               </h2>
               <ShipmentMap
+                shipmentId={shipment.id}
                 pickupAddress={`${shipment.pickup_address_line1}, ${shipment.pickup_city}, ${shipment.pickup_state} ${shipment.pickup_zip_code}`}
                 deliveryAddress={`${shipment.delivery_address_line1}, ${shipment.delivery_city}, ${shipment.delivery_state} ${shipment.delivery_zip_code}`}
                 currentStatus={shipment.status}

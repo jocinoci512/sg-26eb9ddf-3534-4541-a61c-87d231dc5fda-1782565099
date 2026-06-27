@@ -26,55 +26,198 @@ export interface EmailTemplateParams {
 }
 
 /**
- * Send email via Resend API
+ * Send email using Resend API
  */
 export async function sendEmail(data: EmailData): Promise<EmailResponse> {
-  const apiKey = process.env.NEXT_PUBLIC_RESEND_API_KEY;
-
-  if (!apiKey) {
-    console.error('Resend API key not configured');
-    return {
-      success: false,
-      error: 'Email service not configured. Please add RESEND_API_KEY to environment variables.',
-    };
-  }
-
   try {
+    const apiKey = process.env.RESEND_API_KEY;
+
+    if (!apiKey) {
+      console.error('Resend API key not configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const fromEmail = data.from || 'Go Cargo Logistics <support@gocargologisticsus.com>';
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: data.from || 'Go Cargo Logistics <noreply@gocargologisticsus.com>',
-        to: [data.to],
+        from: fromEmail,
+        to: Array.isArray(data.to) ? data.to : [data.to],
         subject: data.subject,
         html: data.html,
       }),
     });
 
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to send email');
+    }
+
     const result = await response.json();
 
-    if (!response.ok) {
-      console.error('Resend API error:', result);
-      return {
-        success: false,
-        error: result.message || 'Failed to send email',
-      };
-    }
+    // Log email to database
+    await logEmail({
+      recipient: Array.isArray(data.to) ? data.to[0] : data.to,
+      subject: data.subject,
+      emailId: result.id,
+      status: 'sent',
+    });
 
     return {
       success: true,
       emailId: result.id,
     };
   } catch (error: any) {
-    console.error('Send email error:', error);
+    console.error('Email send error:', error);
+
+    // Log failed email
+    await logEmail({
+      recipient: Array.isArray(data.to) ? data.to[0] : data.to,
+      subject: data.subject,
+      status: 'failed',
+      errorMessage: error.message,
+    });
+
     return {
       success: false,
-      error: error.message || 'Network error while sending email',
+      error: error.message,
     };
   }
+}
+
+/**
+ * Send contact form notification to support@gocargologisticsus.com
+ */
+export async function sendContactFormNotification(formData: {
+  name: string;
+  email: string;
+  phone?: string;
+  subject: string;
+  message: string;
+}): Promise<EmailResponse> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>New Contact Form Submission</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <div style="background: linear-gradient(135deg, #0B1F3A 0%, #123A6B 50%, #1E5AA8 100%); padding: 30px 20px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New Contact Form Submission</h1>
+    </div>
+    
+    <div style="padding: 30px;">
+      <div style="background-color: #f8f9fa; border-left: 4px solid #1E5AA8; padding: 20px; margin-bottom: 20px;">
+        <h2 style="margin: 0 0 15px 0; color: #0B1F3A; font-size: 18px;">Contact Information</h2>
+        <p style="margin: 5px 0;"><strong>Name:</strong> ${formData.name}</p>
+        <p style="margin: 5px 0;"><strong>Email:</strong> <a href="mailto:${formData.email}" style="color: #1E5AA8;">${formData.email}</a></p>
+        ${formData.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${formData.phone}</p>` : ''}
+        <p style="margin: 5px 0;"><strong>Subject:</strong> ${formData.subject}</p>
+      </div>
+      
+      <div style="padding: 20px; background-color: #f8f9fa; border-radius: 6px;">
+        <h3 style="margin: 0 0 10px 0; color: #0B1F3A;">Message:</h3>
+        <p style="margin: 0; line-height: 1.6; color: #333;">${formData.message}</p>
+      </div>
+      
+      <div style="margin-top: 20px; padding: 15px; background-color: #e8f4f8; border-radius: 6px; text-align: center;">
+        <p style="margin: 0; font-size: 13px; color: #666;">
+          This submission was received on ${new Date().toLocaleString('en-US', { 
+            dateStyle: 'full', 
+            timeStyle: 'short' 
+          })}
+        </p>
+      </div>
+    </div>
+    
+    <div style="background-color: #0B1F3A; color: #ffffff; padding: 20px; text-align: center;">
+      <p style="margin: 5px 0; font-size: 13px;">Go Cargo Logistics</p>
+      <p style="margin: 5px 0; font-size: 12px; opacity: 0.8;">support@gocargologisticsus.com | +1 (940) 238-4915</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail({
+    to: 'support@gocargologisticsus.com',
+    subject: `New Contact Form: ${formData.subject}`,
+    html,
+    from: 'Go Cargo Logistics <support@gocargologisticsus.com>',
+  });
+}
+
+/**
+ * Send quote request notification to support@gocargologisticsus.com
+ */
+export async function sendQuoteRequestNotification(quoteData: {
+  name: string;
+  email: string;
+  phone?: string;
+  pickupLocation: string;
+  deliveryLocation: string;
+  vehicleInfo?: string;
+  shipmentType: string;
+}): Promise<EmailResponse> {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>New Quote Request</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <div style="background: linear-gradient(135deg, #0B1F3A 0%, #123A6B 50%, #1E5AA8 100%); padding: 30px 20px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 24px;">New Quote Request</h1>
+    </div>
+    
+    <div style="padding: 30px;">
+      <div style="background-color: #f8f9fa; border-left: 4px solid #1E5AA8; padding: 20px; margin-bottom: 20px;">
+        <h2 style="margin: 0 0 15px 0; color: #0B1F3A; font-size: 18px;">Customer Information</h2>
+        <p style="margin: 5px 0;"><strong>Name:</strong> ${quoteData.name}</p>
+        <p style="margin: 5px 0;"><strong>Email:</strong> <a href="mailto:${quoteData.email}" style="color: #1E5AA8;">${quoteData.email}</a></p>
+        ${quoteData.phone ? `<p style="margin: 5px 0;"><strong>Phone:</strong> ${quoteData.phone}</p>` : ''}
+      </div>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 15px 0; color: #0B1F3A;">Shipment Details</h3>
+        <p style="margin: 5px 0;"><strong>Type:</strong> ${quoteData.shipmentType}</p>
+        <p style="margin: 5px 0;"><strong>From:</strong> ${quoteData.pickupLocation}</p>
+        <p style="margin: 5px 0;"><strong>To:</strong> ${quoteData.deliveryLocation}</p>
+        ${quoteData.vehicleInfo ? `<p style="margin: 5px 0;"><strong>Vehicle:</strong> ${quoteData.vehicleInfo}</p>` : ''}
+      </div>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'https://gocargologisticsus.com'}/admin/quotes" 
+           style="display: inline-block; background: #1E5AA8; color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 6px; font-weight: bold;">
+          View in Admin Dashboard
+        </a>
+      </div>
+    </div>
+    
+    <div style="background-color: #0B1F3A; color: #ffffff; padding: 20px; text-align: center;">
+      <p style="margin: 5px 0; font-size: 13px;">Go Cargo Logistics</p>
+      <p style="margin: 5px 0; font-size: 12px; opacity: 0.8;">support@gocargologisticsus.com | +1 (940) 238-4915</p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  return sendEmail({
+    to: 'support@gocargologisticsus.com',
+    subject: `New Quote Request from ${quoteData.name}`,
+    html,
+    from: 'Go Cargo Logistics <support@gocargologisticsus.com>',
+  });
 }
 
 /**

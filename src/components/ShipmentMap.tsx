@@ -1,17 +1,20 @@
-import { useEffect, useState, useCallback } from 'react';
-import { GoogleMap, LoadScript, Marker, Polyline, InfoWindow } from '@react-google-maps/api';
-import { Truck, Package, Plane, Ship, Train } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import mapboxgl from 'mapbox-gl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import { Truck, Package, Plane, Ship, Train, Loader2 } from 'lucide-react';
 import { 
   geocodeAddress, 
-  calculateRoute, 
+  calculateTruckRoute, 
   calculatePositionOnRoute,
   formatDistance,
   formatDuration,
-  type Coordinates,
-  type RouteData,
-} from '@/services/geocodingService';
+  type HERECoordinates,
+  type HERERouteData,
+} from '@/services/hereMapsService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ShipmentMapProps {
+  shipmentId?: string;
   pickupAddress: string;
   deliveryAddress: string;
   currentStatus: string;
@@ -19,38 +22,29 @@ interface ShipmentMapProps {
   estimatedDelivery?: string;
 }
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '500px',
-  borderRadius: '8px',
-};
-
-const defaultCenter = {
-  lat: 39.8283,
-  lng: -98.5795, // Center of USA
-};
-
 export function ShipmentMap({
+  shipmentId,
   pickupAddress,
   deliveryAddress,
   currentStatus,
   shipmentType = 'vehicle',
   estimatedDelivery,
 }: ShipmentMapProps) {
-  const [pickupCoords, setPickupCoords] = useState<Coordinates | null>(null);
-  const [deliveryCoords, setDeliveryCoords] = useState<Coordinates | null>(null);
-  const [routeData, setRouteData] = useState<RouteData | null>(null);
-  const [currentPosition, setCurrentPosition] = useState<Coordinates | null>(null);
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const pickupMarker = useRef<mapboxgl.Marker | null>(null);
+  const deliveryMarker = useRef<mapboxgl.Marker | null>(null);
+  const vehicleMarker = useRef<mapboxgl.Marker | null>(null);
+
+  const [pickupCoords, setPickupCoords] = useState<HERECoordinates | null>(null);
+  const [deliveryCoords, setDeliveryCoords] = useState<HERECoordinates | null>(null);
+  const [routeData, setRouteData] = useState<HERERouteData | null>(null);
+  const [currentPosition, setCurrentPosition] = useState<HERECoordinates | null>(null);
   const [progress, setProgress] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mapCenter, setMapCenter] = useState(defaultCenter);
-  const [mapZoom, setMapZoom] = useState(4);
-  const [showPickupInfo, setShowPickupInfo] = useState(false);
-  const [showDeliveryInfo, setShowDeliveryInfo] = useState(false);
-  const [showCurrentInfo, setShowCurrentInfo] = useState(false);
 
-  // Calculate progress based on status
+  // Calculate progress from status
   const calculateProgressFromStatus = useCallback((status: string): number => {
     const statusProgress: Record<string, number> = {
       'booked': 0,
@@ -68,60 +62,178 @@ export function ShipmentMap({
     return statusProgress[status.toLowerCase()] || 0;
   }, []);
 
-  // Initialize map with geocoding and route calculation
+  // Get vehicle icon based on shipment type
+  const getVehicleIcon = useCallback(() => {
+    switch (shipmentType?.toLowerCase()) {
+      case 'air':
+      case 'air_freight':
+        return '✈️';
+      case 'ocean':
+      case 'ocean_freight':
+        return '🚢';
+      case 'rail':
+      case 'rail_freight':
+        return '🚂';
+      case 'freight':
+      case 'container':
+        return '📦';
+      default:
+        return '🚛';
+    }
+  }, [shipmentType]);
+
+  // Initialize map
   useEffect(() => {
-    const initializeMap = async () => {
+    if (!mapContainer.current || !process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN) return;
+
+    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-98.5795, 39.8283], // Center of USA
+      zoom: 4,
+    });
+
+    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right');
+
+    return () => {
+      pickupMarker.current?.remove();
+      deliveryMarker.current?.remove();
+      vehicleMarker.current?.remove();
+      map.current?.remove();
+    };
+  }, []);
+
+  // Initialize route and markers
+  useEffect(() => {
+    const initializeRoute = async () => {
+      if (!map.current) return;
+
       setLoading(true);
       setError(null);
 
       try {
-        // Geocode pickup address
+        // Geocode addresses using HERE Maps
         const pickupResult = await geocodeAddress(pickupAddress);
         if (!pickupResult) {
           throw new Error('Could not find pickup location');
         }
         setPickupCoords(pickupResult.coordinates);
 
-        // Geocode delivery address
         const deliveryResult = await geocodeAddress(deliveryAddress);
         if (!deliveryResult) {
           throw new Error('Could not find delivery location');
         }
         setDeliveryCoords(deliveryResult.coordinates);
 
-        // Calculate route
-        const route = await calculateRoute(pickupAddress, deliveryAddress);
+        // Calculate route using HERE Maps
+        const route = await calculateTruckRoute(
+          pickupResult.coordinates,
+          deliveryResult.coordinates
+        );
         if (!route) {
           throw new Error('Could not calculate route');
         }
         setRouteData(route);
 
-        // Set map center to midpoint
-        const centerLat = (pickupResult.coordinates.lat + deliveryResult.coordinates.lat) / 2;
-        const centerLng = (pickupResult.coordinates.lng + deliveryResult.coordinates.lng) / 2;
-        setMapCenter({ lat: centerLat, lng: centerLng });
+        // Add pickup marker
+        const pickupEl = document.createElement('div');
+        pickupEl.className = 'marker-pickup';
+        pickupEl.style.width = '30px';
+        pickupEl.style.height = '30px';
+        pickupEl.style.borderRadius = '50%';
+        pickupEl.style.backgroundColor = '#0B1F3A';
+        pickupEl.style.border = '3px solid white';
+        pickupEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
 
-        // Calculate appropriate zoom level
-        const latDiff = Math.abs(pickupResult.coordinates.lat - deliveryResult.coordinates.lat);
-        const lngDiff = Math.abs(pickupResult.coordinates.lng - deliveryResult.coordinates.lng);
-        const maxDiff = Math.max(latDiff, lngDiff);
-        
-        let zoom = 4;
-        if (maxDiff < 1) zoom = 10;
-        else if (maxDiff < 5) zoom = 7;
-        else if (maxDiff < 10) zoom = 6;
-        else if (maxDiff < 20) zoom = 5;
-        
-        setMapZoom(zoom);
+        pickupMarker.current = new mapboxgl.Marker(pickupEl)
+          .setLngLat([pickupResult.coordinates.lng, pickupResult.coordinates.lat])
+          .setPopup(
+            new mapboxgl.Popup({ offset: 25 })
+              .setHTML(`<div class="p-2"><strong>Pickup</strong><br/>${pickupAddress}</div>`)
+          )
+          .addTo(map.current);
 
-        // Calculate initial progress
+        // Add delivery marker
+        const deliveryEl = document.createElement('div');
+        deliveryEl.className = 'marker-delivery';
+        deliveryEl.style.width = '30px';
+        deliveryEl.style.height = '30px';
+        deliveryEl.style.borderRadius = '50%';
+        deliveryEl.style.backgroundColor = '#1E5AA8';
+        deliveryEl.style.border = '3px solid white';
+        deliveryEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+
+        deliveryMarker.current = new mapboxgl.Marker(deliveryEl)
+          .setLngLat([deliveryResult.coordinates.lng, deliveryResult.coordinates.lat])
+          .setPopup(
+            new mapboxgl.Popup({ offset: 25 })
+              .setHTML(`<div class="p-2"><strong>Delivery</strong><br/>${deliveryAddress}</div>`)
+          )
+          .addTo(map.current);
+
+        // Add route line
+        const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
+          type: 'Feature',
+          properties: {},
+          geometry: {
+            type: 'LineString',
+            coordinates: route.path.map(p => [p.lng, p.lat]),
+          },
+        };
+
+        if (map.current.getSource('route')) {
+          (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData(routeGeoJSON);
+        } else {
+          map.current.addSource('route', {
+            type: 'geojson',
+            data: routeGeoJSON,
+          });
+
+          map.current.addLayer({
+            id: 'route-line',
+            type: 'line',
+            source: 'route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: {
+              'line-color': '#1E5AA8',
+              'line-width': 5,
+              'line-opacity': 0.8,
+            },
+          });
+        }
+
+        // Fit map to route bounds
+        const bounds = new mapboxgl.LngLatBounds();
+        route.path.forEach(p => bounds.extend([p.lng, p.lat]));
+        map.current.fitBounds(bounds, { padding: 80 });
+
+        // Calculate initial progress and position
         const initialProgress = calculateProgressFromStatus(currentStatus);
         setProgress(initialProgress);
 
-        // Calculate current position on route
-        if (route.path && route.path.length > 0) {
+        if (route.path.length > 0) {
           const position = calculatePositionOnRoute(route.path, initialProgress);
           setCurrentPosition(position);
+
+          // Add vehicle marker
+          const vehicleEl = document.createElement('div');
+          vehicleEl.innerHTML = getVehicleIcon();
+          vehicleEl.style.fontSize = '32px';
+          vehicleEl.style.filter = 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
+
+          vehicleMarker.current = new mapboxgl.Marker(vehicleEl)
+            .setLngLat([position.lng, position.lat])
+            .setPopup(
+              new mapboxgl.Popup({ offset: 25 })
+                .setHTML(`<div class="p-2"><strong>Current Location</strong><br/>${progress.toFixed(1)}% complete<br/>Status: ${currentStatus.replace('_', ' ').toUpperCase()}</div>`)
+            )
+            .addTo(map.current);
         }
 
       } catch (err: any) {
@@ -133,54 +245,72 @@ export function ShipmentMap({
     };
 
     if (pickupAddress && deliveryAddress) {
-      initializeMap();
+      initializeRoute();
     }
-  }, [pickupAddress, deliveryAddress, currentStatus, calculateProgressFromStatus]);
+  }, [pickupAddress, deliveryAddress, currentStatus, calculateProgressFromStatus, getVehicleIcon]);
 
   // Animate vehicle movement
   useEffect(() => {
-    if (!routeData || !routeData.path || progress >= 100) return;
+    if (!routeData || !vehicleMarker.current || progress >= 100) return;
 
     const animationInterval = setInterval(() => {
       setProgress(prev => {
-        const newProgress = Math.min(prev + 0.5, 100);
-        if (routeData.path) {
+        const newProgress = Math.min(prev + 0.3, 100);
+        if (routeData.path && vehicleMarker.current) {
           const position = calculatePositionOnRoute(routeData.path, newProgress);
           setCurrentPosition(position);
+          vehicleMarker.current.setLngLat([position.lng, position.lat]);
+          
+          // Update popup
+          vehicleMarker.current.setPopup(
+            new mapboxgl.Popup({ offset: 25 })
+              .setHTML(`<div class="p-2"><strong>Current Location</strong><br/>${newProgress.toFixed(1)}% complete<br/>Status: ${currentStatus.replace('_', ' ').toUpperCase()}</div>`)
+          );
         }
         return newProgress;
       });
-    }, 1000); // Update every second
+    }, 2000); // Update every 2 seconds
 
     return () => clearInterval(animationInterval);
-  }, [routeData, progress]);
+  }, [routeData, progress, currentStatus]);
 
-  // Get vehicle icon based on shipment type
-  const getVehicleIcon = () => {
-    switch (shipmentType?.toLowerCase()) {
-      case 'air':
-      case 'air_freight':
-        return Plane;
-      case 'ocean':
-      case 'ocean_freight':
-        return Ship;
-      case 'rail':
-      case 'rail_freight':
-        return Train;
-      case 'freight':
-      case 'container':
-        return Package;
-      default:
-        return Truck;
-    }
-  };
+  // Subscribe to real-time shipment updates
+  useEffect(() => {
+    if (!shipmentId) return;
 
-  const VehicleIcon = getVehicleIcon();
+    const channel = supabase
+      .channel(`shipment-${shipmentId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'shipments',
+          filter: `id=eq.${shipmentId}`,
+        },
+        (payload) => {
+          const newStatus = payload.new.status;
+          const newProgress = calculateProgressFromStatus(newStatus);
+          setProgress(newProgress);
 
-  if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+          if (routeData && vehicleMarker.current) {
+            const position = calculatePositionOnRoute(routeData.path, newProgress);
+            setCurrentPosition(position);
+            vehicleMarker.current.setLngLat([position.lng, position.lat]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [shipmentId, routeData, calculateProgressFromStatus]);
+
+  if (!process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || !process.env.NEXT_PUBLIC_HERE_MAPS_API_KEY) {
     return (
       <div className="bg-muted rounded-lg p-8 text-center">
-        <p className="text-destructive">Google Maps API key not configured</p>
+        <p className="text-destructive">Map configuration incomplete. Please configure Mapbox and HERE Maps API keys.</p>
       </div>
     );
   }
@@ -189,8 +319,8 @@ export function ShipmentMap({
     return (
       <div className="bg-muted rounded-lg p-8 text-center">
         <div className="flex items-center justify-center gap-2">
-          <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground">Loading map...</p>
+          <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          <p className="text-muted-foreground">Loading live GPS tracking...</p>
         </div>
       </div>
     );
@@ -200,7 +330,7 @@ export function ShipmentMap({
     return (
       <div className="bg-destructive/10 border border-destructive rounded-lg p-8 text-center">
         <p className="text-destructive font-medium">{error}</p>
-        <p className="text-sm text-muted-foreground mt-2">Please check the addresses and try again</p>
+        <p className="text-sm text-muted-foreground mt-2">Please verify addresses and try again</p>
       </div>
     );
   }
@@ -213,7 +343,7 @@ export function ShipmentMap({
       {/* Map Statistics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-card border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Distance</p>
+          <p className="text-sm text-muted-foreground">Total Distance</p>
           <p className="text-2xl font-bold text-primary">
             {routeData ? formatDistance(routeData.distance) : '-'}
           </p>
@@ -238,142 +368,11 @@ export function ShipmentMap({
         </div>
       </div>
 
-      {/* Interactive Map */}
-      <div className="relative">
-        <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={mapCenter}
-            zoom={mapZoom}
-            options={{
-              streetViewControl: false,
-              mapTypeControl: true,
-              fullscreenControl: true,
-              zoomControl: true,
-            }}
-          >
-            {/* Pickup Marker */}
-            {pickupCoords && (
-              <>
-                <Marker
-                  position={pickupCoords}
-                  icon={{
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: '#0B1F3A',
-                    fillOpacity: 1,
-                    strokeColor: '#FFFFFF',
-                    strokeWeight: 3,
-                  }}
-                  onClick={() => setShowPickupInfo(true)}
-                />
-                {showPickupInfo && (
-                  <InfoWindow
-                    position={pickupCoords}
-                    onCloseClick={() => setShowPickupInfo(false)}
-                  >
-                    <div className="p-2">
-                      <p className="font-bold text-sm">Pickup Location</p>
-                      <p className="text-xs text-gray-600">{pickupAddress}</p>
-                    </div>
-                  </InfoWindow>
-                )}
-              </>
-            )}
-
-            {/* Delivery Marker */}
-            {deliveryCoords && (
-              <>
-                <Marker
-                  position={deliveryCoords}
-                  icon={{
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 10,
-                    fillColor: '#1E5AA8',
-                    fillOpacity: 1,
-                    strokeColor: '#FFFFFF',
-                    strokeWeight: 3,
-                  }}
-                  onClick={() => setShowDeliveryInfo(true)}
-                />
-                {showDeliveryInfo && (
-                  <InfoWindow
-                    position={deliveryCoords}
-                    onCloseClick={() => setShowDeliveryInfo(false)}
-                  >
-                    <div className="p-2">
-                      <p className="font-bold text-sm">Delivery Location</p>
-                      <p className="text-xs text-gray-600">{deliveryAddress}</p>
-                    </div>
-                  </InfoWindow>
-                )}
-              </>
-            )}
-
-            {/* Route Polyline */}
-            {routeData && routeData.path && (
-              <>
-                {/* Completed route (traveled) */}
-                <Polyline
-                  path={routeData.path.slice(0, Math.floor((routeData.path.length * progress) / 100))}
-                  options={{
-                    strokeColor: '#1E5AA8',
-                    strokeOpacity: 1,
-                    strokeWeight: 5,
-                  }}
-                />
-                {/* Remaining route (not traveled) */}
-                <Polyline
-                  path={routeData.path.slice(Math.floor((routeData.path.length * progress) / 100))}
-                  options={{
-                    strokeColor: '#CBD5E1',
-                    strokeOpacity: 0.6,
-                    strokeWeight: 5,
-                  }}
-                />
-              </>
-            )}
-
-            {/* Current Position Marker */}
-            {currentPosition && progress > 0 && progress < 100 && (
-              <>
-                <Marker
-                  position={currentPosition}
-                  icon={{
-                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                    scale: 6,
-                    fillColor: '#FF6B35',
-                    fillOpacity: 1,
-                    strokeColor: '#FFFFFF',
-                    strokeWeight: 2,
-                    rotation: 0,
-                  }}
-                  onClick={() => setShowCurrentInfo(true)}
-                />
-                {showCurrentInfo && (
-                  <InfoWindow
-                    position={currentPosition}
-                    onCloseClick={() => setShowCurrentInfo(false)}
-                  >
-                    <div className="p-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <VehicleIcon className="w-4 h-4 text-primary" />
-                        <p className="font-bold text-sm">Current Location</p>
-                      </div>
-                      <p className="text-xs text-gray-600">
-                        {progress.toFixed(1)}% complete
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        Status: {currentStatus.replace('_', ' ').toUpperCase()}
-                      </p>
-                    </div>
-                  </InfoWindow>
-                )}
-              </>
-            )}
-          </GoogleMap>
-        </LoadScript>
-      </div>
+      {/* Mapbox Map Container */}
+      <div
+        ref={mapContainer}
+        className="w-full h-[500px] rounded-lg shadow-lg border border-border"
+      />
 
       {/* Progress Bar */}
       <div className="bg-card border rounded-lg p-4">
