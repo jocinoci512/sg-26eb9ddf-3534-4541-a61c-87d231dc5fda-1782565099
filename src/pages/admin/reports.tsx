@@ -110,6 +110,68 @@ export default function ReportsPage() {
     }
   };
 
+  const loadMonthlyStats = async () => {
+    try {
+      const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+      const endDate = new Date(selectedYear, selectedMonth, 0);
+
+      const { data: shipments, error } = await supabase
+        .from('shipments')
+        .select('*')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
+
+      if (error) throw error;
+
+      const stats = {
+        month: new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long' }),
+        year: selectedYear.toString(),
+        totalShipments: shipments?.length || 0,
+        activeShipments: shipments?.filter(s => ['pending_pickup', 'picked_up', 'in_transit', 'out_for_delivery'].includes(s.status)).length || 0,
+        deliveredShipments: shipments?.filter(s => s.status === 'delivered').length || 0,
+        delayedShipments: shipments?.filter(s => s.status === 'delayed').length || 0,
+        cancelledShipments: shipments?.filter(s => s.status === 'cancelled').length || 0,
+      };
+
+      // Calculate shipment types
+      const typeCounts: Record<string, number> = {};
+      shipments?.forEach(s => {
+        const type = s.shipment_type || 'Unknown';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
+      });
+
+      const shipmentTypes = Object.entries(typeCounts).map(([type, count]) => ({
+        type,
+        count,
+      }));
+
+      // Calculate top routes
+      const routeCounts: Record<string, number> = {};
+      shipments?.forEach(s => {
+        if (s.pickup_city && s.delivery_city) {
+          const route = `${s.pickup_city} → ${s.delivery_city}`;
+          routeCounts[route] = (routeCounts[route] || 0) + 1;
+        }
+      });
+
+      const topRoutes = Object.entries(routeCounts)
+        .map(([route, count]) => ({ route, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+      setMonthlyStats({ ...stats, shipmentTypes, topRoutes });
+    } catch (error) {
+      console.error('Error loading monthly stats:', error);
+      toast({
+        title: "Error loading stats",
+        description: "Failed to load monthly statistics",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePrintReport = () => {
     if (!reportData) return;
     printMonthlyReport(reportData);
@@ -260,23 +322,21 @@ export default function ReportsPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Shipments by Type</CardTitle>
+                  <CardTitle>Shipment Types</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {Object.keys(reportData.shipmentTypes).length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">No type data</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {Object.entries(reportData.shipmentTypes).map(([type, count]) => (
-                        <div key={type} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                          <span className="text-sm font-medium capitalize">
-                            {type.replace(/_/g, ' ')}
-                          </span>
-                          <span className="text-sm font-bold text-accent">{count}</span>
+                  <div className="space-y-3">
+                    {monthlyStats.shipmentTypes && monthlyStats.shipmentTypes.length > 0 ? (
+                      monthlyStats.shipmentTypes.map((item, index) => (
+                        <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <span className="font-medium">{item.type}</span>
+                          <span className="text-muted-foreground">{item.count} shipments</span>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      ))
+                    ) : (
+                      <p className="text-center text-muted-foreground py-8">No data available</p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>

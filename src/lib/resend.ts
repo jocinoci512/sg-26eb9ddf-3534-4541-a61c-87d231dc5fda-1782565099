@@ -16,6 +16,15 @@ interface EmailResponse {
   error?: string;
 }
 
+export interface EmailTemplateParams {
+  title: string;
+  body: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+}
+
 /**
  * Send email via Resend API
  */

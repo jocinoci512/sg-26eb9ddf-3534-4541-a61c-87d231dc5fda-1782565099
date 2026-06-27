@@ -115,7 +115,7 @@ export default function AdminLogin() {
                 </>
               ) : (
                 <>
-                  <Shield className="mr-2 h-4 w-4" />
+                  <div className="mr-2 h-4 w-4 bg-gradient-to-r from-primary to-accent rounded-md" />
                   Admin Sign In
                 </>
               )}
