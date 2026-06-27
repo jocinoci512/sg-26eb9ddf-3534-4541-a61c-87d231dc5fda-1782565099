@@ -17,7 +17,9 @@ import {
   Search,
   ArrowRight,
   CheckCircle2,
-  TrendingUp
+  TrendingUp,
+  FileText,
+  Phone
 } from "lucide-react";
 import { useState } from "react";
 
@@ -35,50 +37,55 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <Navigation />
 
-      <section className="hero-gradient text-white py-24 md:py-32">
-        <div className="container">
+      <section className="relative py-20 md:py-32 hero-gradient text-white overflow-hidden">
+        <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
+        <div className="container relative z-10">
           <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-6 bg-white/20 text-white border-0 px-4 py-2">
-              Trusted Logistics Partner
-            </Badge>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-              Professional Shipping & Vehicle Transportation
-            </h1>
-            <p className="text-xl md:text-2xl mb-12 text-white/90">
-              Fast, reliable, and secure logistics services across the United States and internationally
-            </p>
-
-            <form onSubmit={handleTrackingSearch} className="max-w-2xl mx-auto mb-8">
-              <div className="flex gap-2 bg-white rounded-lg p-2">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Enter tracking number (e.g., GCL123456789)"
-                    value={trackingNumber}
-                    onChange={(e) => setTrackingNumber(e.target.value)}
-                    className="pl-10 border-0 focus-visible:ring-0 h-12 text-foreground"
-                  />
-                </div>
-                <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 text-white">
-                  Track Shipment
-                </Button>
-              </div>
-            </form>
-
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/quote">
-                <Button size="lg" className="bg-white text-primary hover:bg-white/90">
-                  Get Instant Quote
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
-              <Link href="/services/vehicle-shipping">
-                <Button size="lg" variant="outline" className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary">
-                  Our Services
-                </Button>
-              </Link>
+            <div className="mb-6 animate-fade-up">
+              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30 backdrop-blur-sm">
+                Trusted Global Logistics Partner
+              </Badge>
             </div>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-fade-up [animation-delay:100ms]">
+              Ship Anywhere,
+              <br />
+              <span className="text-white/90">Track Everywhere</span>
+            </h1>
+            <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto animate-fade-up [animation-delay:200ms]">
+              Professional vehicle transportation and freight shipping services across the United States and worldwide with real-time tracking.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-up [animation-delay:300ms]">
+              <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90 text-base px-8 shadow-xl">
+                <Link href="/quote">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Get Free Quote
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm text-base px-8">
+                <Link href="/tracking">
+                  <Search className="w-5 h-5 mr-2" />
+                  Track Shipment
+                </Link>
+              </Button>
+            </div>
+
+            <Card className="bg-white/10 border-white/20 backdrop-blur-md animate-fade-up [animation-delay:400ms]">
+              <CardContent className="p-6">
+                <form onSubmit={handleTrackingSearch} className="flex flex-col sm:flex-row gap-3">
+                  <Input
+                    placeholder="Enter tracking number..."
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
+                    className="flex-1 bg-white/90 text-foreground placeholder:text-muted-foreground border-white/30 h-12"
+                  />
+                  <Button type="submit" size="lg" className="bg-white text-primary hover:bg-white/90 px-8">
+                    <Search className="w-5 h-5 mr-2" />
+                    Track Now
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
@@ -311,26 +318,29 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-20 bg-gradient-to-br from-primary to-accent text-white">
-        <div className="container text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Ship with Go Cargo Logistics?
-          </h2>
-          <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
-            Get your instant quote today and experience professional logistics service
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/quote">
-              <Button size="lg" className="bg-white text-primary hover:bg-white/90">
-                Get Free Quote
-                <ArrowRight className="ml-2 w-5 h-5" />
+      <section className="py-20 hero-gradient text-white">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ready to Ship with Confidence?
+            </h2>
+            <p className="text-lg text-white/90 mb-8">
+              Get started with a free quote or speak with our logistics experts today.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button asChild size="lg" className="bg-white text-primary hover:bg-white/90 text-base px-8 shadow-xl">
+                <Link href="/quote">
+                  <FileText className="w-5 h-5 mr-2" />
+                  Request a Quote
+                </Link>
               </Button>
-            </Link>
-            <Link href="/contact">
-              <Button size="lg" variant="outline" className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary">
-                Contact Us
+              <Button asChild size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm text-base px-8">
+                <Link href="/contact">
+                  <Phone className="w-5 h-5 mr-2" />
+                  Contact Us
+                </Link>
               </Button>
-            </Link>
+            </div>
           </div>
         </div>
       </section>
