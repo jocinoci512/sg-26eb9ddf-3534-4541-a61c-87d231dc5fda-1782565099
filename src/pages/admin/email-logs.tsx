@@ -24,7 +24,12 @@ interface EmailLog {
   status: string;
   sent_at: string;
   error_message: string | null;
+  template_key: string;
+  shipment_id: string | null;
   retry_count: number;
+  provider: string;
+  resend_email_id: string | null;
+  created_at: string;
   metadata: any;
 }
 
