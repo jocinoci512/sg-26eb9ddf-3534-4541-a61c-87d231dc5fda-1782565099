@@ -11,6 +11,9 @@ export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   useEffect(() => {
+    // Only initialize when router is ready to prevent double-initialization
+    if (!router.isReady) return;
+
     // Initialize session on app load
     const initializeSession = async () => {
       const sessionId = analyticsService.getSessionId();
@@ -22,11 +25,11 @@ export default function App({ Component, pageProps }: AppProps) {
           .from('customers')
           .select('id')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         customerId = customer?.id;
       }
 
-      // Start session
+      // Start session (now has client-side guard to prevent duplicates)
       await analyticsService.startSession({
         sessionId,
         userId: user?.id,
@@ -56,7 +59,7 @@ export default function App({ Component, pageProps }: AppProps) {
           .from('customers')
           .select('id')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
         customerId = customer?.id;
       }
 
@@ -81,9 +84,9 @@ export default function App({ Component, pageProps }: AppProps) {
 
     return () => {
       router.events.off('routeChangeComplete', handleRouteChange);
-      window.addEventListener('beforeunload', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
     };
-  }, [router]);
+  }, [router.isReady, router.pathname]); // Add router.isReady and router.pathname as dependencies
 
   return (
     <ThemeProvider>

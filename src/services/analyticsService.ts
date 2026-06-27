@@ -167,14 +167,26 @@ export const analyticsService = {
    */
   async startSession(data: SessionData) {
     try {
-      // Check if session already exists
+      const sessionCreatedKey = `gc_session_created_${data.sessionId}`;
+      
+      // Client-side guard: check if we've already initiated session creation
+      if (typeof window !== 'undefined') {
+        const alreadyCreated = sessionStorage.getItem(sessionCreatedKey);
+        if (alreadyCreated === 'true') {
+          return; // Session creation already initiated
+        }
+        // Mark as initiated immediately to prevent race conditions
+        sessionStorage.setItem(sessionCreatedKey, 'true');
+      }
+
+      // Check if session already exists in database
       const { data: existingSession } = await supabase
         .from('user_sessions')
         .select('id')
         .eq('session_id', data.sessionId)
         .maybeSingle();
 
-      // If session already exists, don't create a new one
+      // If session already exists, return early
       if (existingSession) {
         return;
       }
@@ -200,9 +212,21 @@ export const analyticsService = {
         pages_visited: 0,
       });
 
-      if (error) throw error;
+      if (error) {
+        // If duplicate key error, silently ignore (session was created by another call)
+        if (error.code === '23505') {
+          console.log('Session already exists (handled duplicate)');
+          return;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Start session error:', error);
+      // Clear the guard flag on error so it can be retried
+      if (typeof window !== 'undefined') {
+        const sessionCreatedKey = `gc_session_created_${data.sessionId}`;
+        sessionStorage.removeItem(sessionCreatedKey);
+      }
     }
   },
 
