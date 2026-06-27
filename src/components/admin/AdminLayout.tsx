@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { supabase } from "@/integrations/supabase/client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
 import { 
   LayoutDashboard, 
   Package, 
@@ -74,6 +75,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Shipments', href: '/admin/shipments', icon: Package },
     { name: 'Quotes', href: '/admin/quotes', icon: FileText },
     { name: 'Customers', href: '/admin/customers', icon: Users },
+    { name: 'Reports', href: '/admin/reports', icon: FileText },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
@@ -82,13 +84,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b z-50 px-4 py-3">
         <div className="flex items-center justify-between">
           <h1 className="font-bold text-xl">Admin Portal</h1>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </Button>
+          </div>
         </div>
       </div>
 

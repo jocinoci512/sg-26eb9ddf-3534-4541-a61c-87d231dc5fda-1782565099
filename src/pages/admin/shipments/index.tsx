@@ -22,8 +22,10 @@ import {
 } from "@/components/ui/table";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Package, Plus, Loader2, Eye, Edit, Trash2 } from "lucide-react";
+import { Search, Package, Plus, Loader2, Eye, Edit, Trash2, Printer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { printShippingLabel } from "@/lib/pdfGenerator";
+import type { ShippingLabelData } from "@/lib/pdfGenerator";
 
 export default function ShipmentsManagementPage() {
   const { toast } = useToast();
@@ -75,6 +77,37 @@ export default function ShipmentsManagementPage() {
     if (status === 'delayed' || status === 'cancelled') return 'destructive';
     if (status === 'in_transit') return 'secondary';
     return 'outline';
+  };
+
+  const handlePrintLabel = (shipment: any) => {
+    const labelData: ShippingLabelData = {
+      trackingNumber: shipment.tracking_number,
+      senderName: shipment.sender_name || 'Go Cargo Logistics',
+      senderAddress: shipment.pickup_address_line1,
+      senderCity: shipment.pickup_city,
+      senderState: shipment.pickup_state,
+      senderZip: shipment.pickup_zip_code,
+      receiverName: shipment.receiver_name || shipment.customers?.full_name || 'Recipient',
+      receiverAddress: shipment.delivery_address_line1,
+      receiverCity: shipment.delivery_city,
+      receiverState: shipment.delivery_state,
+      receiverZip: shipment.delivery_zip_code,
+      shipmentType: shipment.shipment_type,
+      shipmentDate: new Date(shipment.created_at).toLocaleDateString(),
+      estimatedDelivery: shipment.estimated_delivery_date 
+        ? new Date(shipment.estimated_delivery_date).toLocaleDateString()
+        : undefined,
+      vehicleInfo: shipment.vehicles 
+        ? `${shipment.vehicles.year} ${shipment.vehicles.make} ${shipment.vehicles.model}`
+        : undefined,
+    };
+
+    printShippingLabel(labelData);
+    
+    toast({
+      title: "Label Generated",
+      description: "Shipping label opened in new window for printing",
+    });
   };
 
   const filteredShipments = shipments.filter(shipment => {
@@ -227,6 +260,14 @@ export default function ShipmentsManagementPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handlePrintLabel(shipment)}
+                              title="Print Shipping Label"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </Button>
                             <Button variant="ghost" size="sm">
                               <Eye className="w-4 h-4" />
                             </Button>
