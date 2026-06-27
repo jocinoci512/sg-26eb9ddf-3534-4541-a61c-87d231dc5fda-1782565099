@@ -30,28 +30,27 @@ export default function CustomersPage() {
   const loadCustomers = async () => {
     setLoading(true);
     try {
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
+      const { data: customersData, error: customersError } = await supabase
+        .from('customers')
         .select('*')
-        .eq('role', 'customer')
         .order('created_at', { ascending: false });
 
-      if (usersError) throw usersError;
+      if (customersError) throw customersError;
 
       const customersWithStats = await Promise.all(
-        (usersData ?? []).map(async (user) => {
+        (customersData ?? []).map(async (customer) => {
           const { count: shipmentsCount } = await supabase
             .from('shipments')
             .select('*', { count: 'exact', head: true })
-            .eq('customer_id', user.id);
+            .eq('customer_id', customer.id);
 
           const { count: quotesCount } = await supabase
             .from('quotes')
             .select('*', { count: 'exact', head: true })
-            .eq('customer_email', user.email);
+            .eq('customer_email', customer.email);
 
           return {
-            ...user,
+            ...customer,
             shipmentsCount: shipmentsCount ?? 0,
             quotesCount: quotesCount ?? 0,
           };
