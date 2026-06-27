@@ -1,28 +1,27 @@
 ---
 title: Admin Dashboard Foundation
-status: todo
+status: in_progress
 priority: high
 type: feature
-tags: [admin, dashboard]
+tags: [admin, dashboard, management]
 created_by: agent
 created_at: 2026-06-26T23:59:37Z
 position: 5
 ---
 
 ## Notes
-Secure admin dashboard with overview stats, shipment management, customer list, quote management. Role-based access control for staff.
+Secure admin panel for managing shipments, quotes, customers, and viewing analytics.
 
 ## Checklist
-- [ ] Create admin layout with sidebar navigation
-- [ ] Build dashboard overview with key metrics and charts
-- [ ] Add shipments list with search/filter/pagination
-- [ ] Create shipment create/edit forms
-- [ ] Build customer management table
-- [ ] Add quote management with approve/reject actions
-- [ ] Implement staff role permissions check
-- [ ] Add activity log viewer
+- [ ] Create admin login/authentication check
+- [ ] Build admin dashboard layout with sidebar navigation
+- [ ] Create shipments management page (list, create, edit, delete)
+- [ ] Build quote management page with approve/reject workflow
+- [ ] Add customers list page
+- [ ] Display analytics cards with real-time data
+- [ ] Create shipment detail page with full CRUD
 
 ## Acceptance
-- Admin can create, view, edit, delete shipments
+- Only authenticated staff can access admin routes
 - Dashboard shows real-time metrics
 - Quote workflow (pending → approved → converted to shipment) works
