@@ -54,7 +54,15 @@ export default function TrackingPage() {
     try {
       const { data: shipmentData, error: shipmentError } = await supabase
         .from('shipments')
-        .select('*')
+        .select(`
+          *,
+          vehicles (
+            make,
+            model,
+            year,
+            color
+          )
+        `)
         .eq('tracking_number', searchNumber.toUpperCase())
         .maybeSingle();
 
@@ -72,7 +80,7 @@ export default function TrackingPage() {
         .from('tracking_updates')
         .select('*')
         .eq('shipment_id', shipmentData.id)
-        .order('update_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (updatesError) throw updatesError;
 
@@ -182,14 +190,24 @@ export default function TrackingPage() {
                       <h3 className="font-bold text-sm text-muted-foreground mb-1">Pickup Location</h3>
                       <div className="flex items-start gap-2">
                         <MapPin className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
-                        <p className="text-foreground">{shipment.pickup_address}</p>
+                        <p className="text-foreground">
+                          {shipment.pickup_address_line1}
+                          {shipment.pickup_address_line2 && `, ${shipment.pickup_address_line2}`}
+                          <br />
+                          {shipment.pickup_city}, {shipment.pickup_state} {shipment.pickup_zip_code}
+                        </p>
                       </div>
                     </div>
                     <div>
                       <h3 className="font-bold text-sm text-muted-foreground mb-1">Delivery Location</h3>
                       <div className="flex items-start gap-2">
                         <MapPin className="w-4 h-4 text-accent mt-1 flex-shrink-0" />
-                        <p className="text-foreground">{shipment.delivery_address}</p>
+                        <p className="text-foreground">
+                          {shipment.delivery_address_line1}
+                          {shipment.delivery_address_line2 && `, ${shipment.delivery_address_line2}`}
+                          <br />
+                          {shipment.delivery_city}, {shipment.delivery_state} {shipment.delivery_zip_code}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -221,7 +239,7 @@ export default function TrackingPage() {
                   </div>
                 </div>
 
-                {shipment.vehicle_make && (
+                {shipment.vehicles && (
                   <>
                     <Separator className="my-6" />
                     <div>
@@ -229,20 +247,20 @@ export default function TrackingPage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Make</p>
-                          <p className="font-medium">{shipment.vehicle_make}</p>
+                          <p className="font-medium">{shipment.vehicles.make}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Model</p>
-                          <p className="font-medium">{shipment.vehicle_model}</p>
+                          <p className="font-medium">{shipment.vehicles.model}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Year</p>
-                          <p className="font-medium">{shipment.vehicle_year}</p>
+                          <p className="font-medium">{shipment.vehicles.year}</p>
                         </div>
-                        {shipment.vehicle_color && (
+                        {shipment.vehicles.color && (
                           <div>
                             <p className="text-sm text-muted-foreground">Color</p>
-                            <p className="font-medium">{shipment.vehicle_color}</p>
+                            <p className="font-medium">{shipment.vehicles.color}</p>
                           </div>
                         )}
                       </div>
@@ -279,7 +297,7 @@ export default function TrackingPage() {
                           <div className="flex items-start justify-between mb-1">
                             <h4 className="font-bold">{formatStatus(update.status)}</h4>
                             <span className="text-sm text-muted-foreground">
-                              {new Date(update.update_date).toLocaleDateString('en-US', {
+                              {new Date(update.created_at).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric',
