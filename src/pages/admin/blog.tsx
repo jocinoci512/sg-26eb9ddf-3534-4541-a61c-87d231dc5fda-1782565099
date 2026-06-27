@@ -39,13 +39,13 @@ interface BlogPost {
   slug: string;
   excerpt: string;
   content: string;
-  featured_image_url: string | null;
+  featured_image: string | null;
   author_id: string;
   status: 'draft' | 'published';
   published_at: string | null;
-  meta_title: string | null;
-  meta_description: string | null;
-  category: string | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  category_id: string | null;
   tags: string[] | null;
   created_at: string;
   updated_at: string;
@@ -116,11 +116,11 @@ export default function BlogManagementPage() {
     setSlug(post.slug);
     setExcerpt(post.excerpt);
     setContent(post.content);
-    setFeaturedImage(post.featured_image_url || "");
+    setFeaturedImage(post.featured_image || "");
     setStatus(post.status);
-    setMetaTitle(post.meta_title || "");
-    setMetaDescription(post.meta_description || "");
-    setCategory(post.category || "");
+    setMetaTitle(post.seo_title || "");
+    setMetaDescription(post.seo_description || "");
+    setCategory(post.category_id || "");
     setTags(post.tags ? post.tags.join(', ') : "");
     setDialogOpen(true);
   };
@@ -152,20 +152,31 @@ export default function BlogManagementPage() {
         slug,
         excerpt,
         content,
-        featured_image_url: featuredImage || null,
+        featured_image: featuredImage || null,
         author_id: user.id,
         status,
         published_at: status === 'published' ? new Date().toISOString() : null,
-        meta_title: metaTitle || null,
-        meta_description: metaDescription || null,
-        category: category || null,
+        seo_title: metaTitle || null,
+        seo_description: metaDescription || null,
+        category_id: category || null,
         tags: tags ? tags.split(',').map(t => t.trim()) : null,
       };
 
       if (editingPost) {
         const { error } = await supabase
           .from('blog_posts')
-          .update(postData)
+          .update({
+            title,
+            slug,
+            excerpt,
+            content,
+            featured_image: featuredImage || null,
+            status,
+            seo_title: metaTitle || null,
+            seo_description: metaDescription || null,
+            category_id: category || null,
+            tags: tags ? tags.split(',').map(t => t.trim()) : null,
+          })
           .eq('id', editingPost.id);
 
         if (error) throw error;
@@ -177,7 +188,20 @@ export default function BlogManagementPage() {
       } else {
         const { error } = await supabase
           .from('blog_posts')
-          .insert([postData]);
+          .insert([{
+            title,
+            slug,
+            excerpt,
+            content,
+            featured_image: featuredImage || null,
+            author_id: user.id,
+            status,
+            published_at: status === 'published' ? new Date().toISOString() : null,
+            seo_title: metaTitle || null,
+            seo_description: metaDescription || null,
+            category_id: category || null,
+            tags: tags ? tags.split(',').map(t => t.trim()) : null,
+          }]);
 
         if (error) throw error;
 
@@ -458,8 +482,8 @@ export default function BlogManagementPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {post.category ? (
-                            <Badge variant="outline">{post.category}</Badge>
+                          {post.category_id ? (
+                            <Badge variant="outline">{post.category_id}</Badge>
                           ) : (
                             <span className="text-muted-foreground text-sm">Uncategorized</span>
                           )}
