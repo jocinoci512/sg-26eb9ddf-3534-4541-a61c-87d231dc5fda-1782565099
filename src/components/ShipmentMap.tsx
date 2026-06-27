@@ -1,258 +1,399 @@
-import { useEffect, useRef, useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { MapPin, Navigation, Package, Clock } from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { GoogleMap, LoadScript, Marker, Polyline, InfoWindow } from '@react-google-maps/api';
+import { Truck, Package, Plane, Ship, Train } from 'lucide-react';
+import { 
+  geocodeAddress, 
+  calculateRoute, 
+  calculatePositionOnRoute,
+  formatDistance,
+  formatDuration,
+  type Coordinates,
+  type RouteData,
+} from '@/services/geocodingService';
 
 interface ShipmentMapProps {
   pickupAddress: string;
-  pickupCity: string;
-  pickupState: string;
   deliveryAddress: string;
-  deliveryCity: string;
-  deliveryState: string;
-  status: string;
+  currentStatus: string;
+  shipmentType?: string;
+  estimatedDelivery?: string;
 }
+
+const mapContainerStyle = {
+  width: '100%',
+  height: '500px',
+  borderRadius: '8px',
+};
+
+const defaultCenter = {
+  lat: 39.8283,
+  lng: -98.5795, // Center of USA
+};
 
 export function ShipmentMap({
   pickupAddress,
-  pickupCity,
-  pickupState,
   deliveryAddress,
-  deliveryCity,
-  deliveryState,
-  status,
+  currentStatus,
+  shipmentType = 'vehicle',
+  estimatedDelivery,
 }: ShipmentMapProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [pickupCoords, setPickupCoords] = useState<Coordinates | null>(null);
+  const [deliveryCoords, setDeliveryCoords] = useState<Coordinates | null>(null);
+  const [routeData, setRouteData] = useState<RouteData | null>(null);
+  const [currentPosition, setCurrentPosition] = useState<Coordinates | null>(null);
   const [progress, setProgress] = useState(0);
-  const [distance, setDistance] = useState(0);
-  const [eta, setEta] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
+  const [mapZoom, setMapZoom] = useState(4);
+  const [showPickupInfo, setShowPickupInfo] = useState(false);
+  const [showDeliveryInfo, setShowDeliveryInfo] = useState(false);
+  const [showCurrentInfo, setShowCurrentInfo] = useState(false);
 
-  // Calculate progress based on shipment status
-  useEffect(() => {
+  // Calculate progress based on status
+  const calculateProgressFromStatus = useCallback((status: string): number => {
     const statusProgress: Record<string, number> = {
       'booked': 0,
       'pending_pickup': 5,
       'picked_up': 15,
-      'processing': 25,
-      'loaded': 30,
-      'in_transit': 60,
+      'processing': 20,
+      'loaded': 25,
+      'in_transit': 50,
       'distribution_center': 75,
       'customs_clearance': 80,
       'out_for_delivery': 90,
       'delivered': 100,
       'completed': 100,
     };
+    return statusProgress[status.toLowerCase()] || 0;
+  }, []);
 
-    const currentProgress = statusProgress[status] || 0;
-    setProgress(currentProgress);
-
-    // Calculate estimated distance (simplified)
-    const estimatedDistance = Math.floor(Math.random() * 2000) + 500;
-    setDistance(estimatedDistance);
-
-    // Calculate ETA based on progress
-    if (currentProgress < 100) {
-      const remainingDays = Math.ceil((100 - currentProgress) / 20);
-      const etaDate = new Date();
-      etaDate.setDate(etaDate.getDate() + remainingDays);
-      setEta(etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
-    } else {
-      setEta('Delivered');
-    }
-  }, [status]);
-
-  // Draw animated route on canvas
+  // Initialize map with geocoding and route calculation
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const initializeMap = async () => {
+      setLoading(true);
+      setError(null);
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+      try {
+        // Geocode pickup address
+        const pickupResult = await geocodeAddress(pickupAddress);
+        if (!pickupResult) {
+          throw new Error('Could not find pickup location');
+        }
+        setPickupCoords(pickupResult.coordinates);
 
-    const width = canvas.width;
-    const height = canvas.height;
+        // Geocode delivery address
+        const deliveryResult = await geocodeAddress(deliveryAddress);
+        if (!deliveryResult) {
+          throw new Error('Could not find delivery location');
+        }
+        setDeliveryCoords(deliveryResult.coordinates);
 
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
+        // Calculate route
+        const route = await calculateRoute(pickupAddress, deliveryAddress);
+        if (!route) {
+          throw new Error('Could not calculate route');
+        }
+        setRouteData(route);
 
-    // Starting and ending points
-    const startX = 60;
-    const startY = height / 2;
-    const endX = width - 60;
-    const endY = height / 2;
+        // Set map center to midpoint
+        const centerLat = (pickupResult.coordinates.lat + deliveryResult.coordinates.lat) / 2;
+        const centerLng = (pickupResult.coordinates.lng + deliveryResult.coordinates.lng) / 2;
+        setMapCenter({ lat: centerLat, lng: centerLng });
 
-    // Calculate current position based on progress
-    const currentX = startX + (endX - startX) * (progress / 100);
-    const currentY = startY + Math.sin((currentX - startX) / 50) * 20;
+        // Calculate appropriate zoom level
+        const latDiff = Math.abs(pickupResult.coordinates.lat - deliveryResult.coordinates.lat);
+        const lngDiff = Math.abs(pickupResult.coordinates.lng - deliveryResult.coordinates.lng);
+        const maxDiff = Math.max(latDiff, lngDiff);
+        
+        let zoom = 4;
+        if (maxDiff < 1) zoom = 10;
+        else if (maxDiff < 5) zoom = 7;
+        else if (maxDiff < 10) zoom = 6;
+        else if (maxDiff < 20) zoom = 5;
+        
+        setMapZoom(zoom);
 
-    // Draw route line (dashed for remaining, solid for completed)
-    ctx.beginPath();
-    ctx.strokeStyle = '#1E5AA8';
-    ctx.lineWidth = 3;
-    
-    // Draw completed path
-    const gradient = ctx.createLinearGradient(startX, 0, currentX, 0);
-    gradient.addColorStop(0, '#0B1F3A');
-    gradient.addColorStop(1, '#1E5AA8');
-    ctx.strokeStyle = gradient;
-    
-    ctx.moveTo(startX, startY);
-    for (let x = startX; x <= currentX; x += 5) {
-      const y = startY + Math.sin((x - startX) / 50) * 20;
-      ctx.lineTo(x, y);
+        // Calculate initial progress
+        const initialProgress = calculateProgressFromStatus(currentStatus);
+        setProgress(initialProgress);
+
+        // Calculate current position on route
+        if (route.path && route.path.length > 0) {
+          const position = calculatePositionOnRoute(route.path, initialProgress);
+          setCurrentPosition(position);
+        }
+
+      } catch (err: any) {
+        console.error('Map initialization error:', err);
+        setError(err.message || 'Failed to load map');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (pickupAddress && deliveryAddress) {
+      initializeMap();
     }
-    ctx.stroke();
+  }, [pickupAddress, deliveryAddress, currentStatus, calculateProgressFromStatus]);
 
-    // Draw remaining path (dashed)
-    ctx.beginPath();
-    ctx.strokeStyle = '#CBD5E1';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]);
-    
-    for (let x = currentX; x <= endX; x += 5) {
-      const y = startY + Math.sin((x - startX) / 50) * 20;
-      ctx.lineTo(x, y);
+  // Animate vehicle movement
+  useEffect(() => {
+    if (!routeData || !routeData.path || progress >= 100) return;
+
+    const animationInterval = setInterval(() => {
+      setProgress(prev => {
+        const newProgress = Math.min(prev + 0.5, 100);
+        if (routeData.path) {
+          const position = calculatePositionOnRoute(routeData.path, newProgress);
+          setCurrentPosition(position);
+        }
+        return newProgress;
+      });
+    }, 1000); // Update every second
+
+    return () => clearInterval(animationInterval);
+  }, [routeData, progress]);
+
+  // Get vehicle icon based on shipment type
+  const getVehicleIcon = () => {
+    switch (shipmentType?.toLowerCase()) {
+      case 'air':
+      case 'air_freight':
+        return Plane;
+      case 'ocean':
+      case 'ocean_freight':
+        return Ship;
+      case 'rail':
+      case 'rail_freight':
+        return Train;
+      case 'freight':
+      case 'container':
+        return Package;
+      default:
+        return Truck;
     }
-    ctx.stroke();
-    ctx.setLineDash([]);
+  };
 
-    // Draw pickup marker (start)
-    ctx.beginPath();
-    ctx.arc(startX, startY, 12, 0, Math.PI * 2);
-    ctx.fillStyle = '#0B1F3A';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
-    ctx.stroke();
+  const VehicleIcon = getVehicleIcon();
 
-    // Draw delivery marker (end)
-    ctx.beginPath();
-    ctx.arc(endX, endY, 12, 0, Math.PI * 2);
-    ctx.fillStyle = progress === 100 ? '#10B981' : '#1E5AA8';
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 3;
-    ctx.stroke();
+  if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+    return (
+      <div className="bg-muted rounded-lg p-8 text-center">
+        <p className="text-destructive">Google Maps API key not configured</p>
+      </div>
+    );
+  }
 
-    // Draw current position marker (animated)
-    if (progress > 0 && progress < 100) {
-      // Pulsing animation
-      const pulse = Math.sin(Date.now() / 300) * 3 + 15;
-      
-      ctx.beginPath();
-      ctx.arc(currentX, currentY, pulse, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(30, 90, 168, 0.2)';
-      ctx.fill();
+  if (loading) {
+    return (
+      <div className="bg-muted rounded-lg p-8 text-center">
+        <div className="flex items-center justify-center gap-2">
+          <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
 
-      ctx.beginPath();
-      ctx.arc(currentX, currentY, 10, 0, Math.PI * 2);
-      ctx.fillStyle = '#1E5AA8';
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
+  if (error) {
+    return (
+      <div className="bg-destructive/10 border border-destructive rounded-lg p-8 text-center">
+        <p className="text-destructive font-medium">{error}</p>
+        <p className="text-sm text-muted-foreground mt-2">Please check the addresses and try again</p>
+      </div>
+    );
+  }
 
-    // Animate
-    const animationId = requestAnimationFrame(() => {});
-    return () => cancelAnimationFrame(animationId);
-  }, [progress]);
+  const distanceTraveled = routeData ? (routeData.distance * progress) / 100 : 0;
+  const distanceRemaining = routeData ? routeData.distance - distanceTraveled : 0;
 
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-0">
-        {/* Map Canvas */}
-        <div className="relative bg-gradient-to-br from-slate-50 to-blue-50 p-8">
-          <canvas
-            ref={canvasRef}
-            width={800}
-            height={200}
-            className="w-full h-auto"
-            style={{ maxHeight: '200px' }}
+    <div className="space-y-4">
+      {/* Map Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-card border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground">Distance</p>
+          <p className="text-2xl font-bold text-primary">
+            {routeData ? formatDistance(routeData.distance) : '-'}
+          </p>
+        </div>
+        <div className="bg-card border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground">Remaining</p>
+          <p className="text-2xl font-bold text-accent">
+            {formatDistance(distanceRemaining)}
+          </p>
+        </div>
+        <div className="bg-card border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground">Duration</p>
+          <p className="text-2xl font-bold text-primary">
+            {routeData ? formatDuration(routeData.duration) : '-'}
+          </p>
+        </div>
+        <div className="bg-card border rounded-lg p-4">
+          <p className="text-sm text-muted-foreground">Progress</p>
+          <p className="text-2xl font-bold text-accent">
+            {progress.toFixed(1)}%
+          </p>
+        </div>
+      </div>
+
+      {/* Interactive Map */}
+      <div className="relative">
+        <LoadScript googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}>
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={mapCenter}
+            zoom={mapZoom}
+            options={{
+              streetViewControl: false,
+              mapTypeControl: true,
+              fullscreenControl: true,
+              zoomControl: true,
+            }}
+          >
+            {/* Pickup Marker */}
+            {pickupCoords && (
+              <>
+                <Marker
+                  position={pickupCoords}
+                  icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: '#0B1F3A',
+                    fillOpacity: 1,
+                    strokeColor: '#FFFFFF',
+                    strokeWeight: 3,
+                  }}
+                  onClick={() => setShowPickupInfo(true)}
+                />
+                {showPickupInfo && (
+                  <InfoWindow
+                    position={pickupCoords}
+                    onCloseClick={() => setShowPickupInfo(false)}
+                  >
+                    <div className="p-2">
+                      <p className="font-bold text-sm">Pickup Location</p>
+                      <p className="text-xs text-gray-600">{pickupAddress}</p>
+                    </div>
+                  </InfoWindow>
+                )}
+              </>
+            )}
+
+            {/* Delivery Marker */}
+            {deliveryCoords && (
+              <>
+                <Marker
+                  position={deliveryCoords}
+                  icon={{
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 10,
+                    fillColor: '#1E5AA8',
+                    fillOpacity: 1,
+                    strokeColor: '#FFFFFF',
+                    strokeWeight: 3,
+                  }}
+                  onClick={() => setShowDeliveryInfo(true)}
+                />
+                {showDeliveryInfo && (
+                  <InfoWindow
+                    position={deliveryCoords}
+                    onCloseClick={() => setShowDeliveryInfo(false)}
+                  >
+                    <div className="p-2">
+                      <p className="font-bold text-sm">Delivery Location</p>
+                      <p className="text-xs text-gray-600">{deliveryAddress}</p>
+                    </div>
+                  </InfoWindow>
+                )}
+              </>
+            )}
+
+            {/* Route Polyline */}
+            {routeData && routeData.path && (
+              <>
+                {/* Completed route (traveled) */}
+                <Polyline
+                  path={routeData.path.slice(0, Math.floor((routeData.path.length * progress) / 100))}
+                  options={{
+                    strokeColor: '#1E5AA8',
+                    strokeOpacity: 1,
+                    strokeWeight: 5,
+                  }}
+                />
+                {/* Remaining route (not traveled) */}
+                <Polyline
+                  path={routeData.path.slice(Math.floor((routeData.path.length * progress) / 100))}
+                  options={{
+                    strokeColor: '#CBD5E1',
+                    strokeOpacity: 0.6,
+                    strokeWeight: 5,
+                    strokePattern: 'dashed',
+                  }}
+                />
+              </>
+            )}
+
+            {/* Current Position Marker */}
+            {currentPosition && progress > 0 && progress < 100 && (
+              <>
+                <Marker
+                  position={currentPosition}
+                  icon={{
+                    path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                    scale: 6,
+                    fillColor: '#FF6B35',
+                    fillOpacity: 1,
+                    strokeColor: '#FFFFFF',
+                    strokeWeight: 2,
+                    rotation: 0,
+                  }}
+                  onClick={() => setShowCurrentInfo(true)}
+                />
+                {showCurrentInfo && (
+                  <InfoWindow
+                    position={currentPosition}
+                    onCloseClick={() => setShowCurrentInfo(false)}
+                  >
+                    <div className="p-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <VehicleIcon className="w-4 h-4 text-primary" />
+                        <p className="font-bold text-sm">Current Location</p>
+                      </div>
+                      <p className="text-xs text-gray-600">
+                        {progress.toFixed(1)}% complete
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Status: {currentStatus.replace('_', ' ').toUpperCase()}
+                      </p>
+                    </div>
+                  </InfoWindow>
+                )}
+              </>
+            )}
+          </GoogleMap>
+        </LoadScript>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="bg-card border rounded-lg p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium">Shipment Progress</span>
+          <span className="text-sm text-muted-foreground">{progress.toFixed(1)}%</span>
+        </div>
+        <div className="w-full bg-muted rounded-full h-3">
+          <div
+            className="bg-gradient-to-r from-primary to-accent h-3 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
           />
-
-          {/* Pickup Label */}
-          <div className="absolute left-8 top-4">
-            <div className="bg-white rounded-lg shadow-lg p-3 border-2 border-primary max-w-xs">
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-primary">Pickup</p>
-                  <p className="text-xs font-medium">{pickupCity}, {pickupState}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Delivery Label */}
-          <div className="absolute right-8 top-4">
-            <div className={`bg-white rounded-lg shadow-lg p-3 border-2 max-w-xs ${progress === 100 ? 'border-green-500' : 'border-accent'}`}>
-              <div className="flex items-start gap-2">
-                <MapPin className={`w-4 h-4 flex-shrink-0 mt-0.5 ${progress === 100 ? 'text-green-600' : 'text-accent'}`} />
-                <div>
-                  <p className={`text-xs font-semibold ${progress === 100 ? 'text-green-600' : 'text-accent'}`}>
-                    {progress === 100 ? 'Delivered' : 'Delivery'}
-                  </p>
-                  <p className="text-xs font-medium">{deliveryCity}, {deliveryState}</p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
-
-        {/* Progress Stats */}
-        <div className="bg-white border-t p-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Package className="w-5 h-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Progress</span>
-              </div>
-              <div className="text-2xl font-bold text-primary">{progress}%</div>
-            </div>
-
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Navigation className="w-5 h-5 text-accent" />
-                <span className="text-sm text-muted-foreground">Distance</span>
-              </div>
-              <div className="text-2xl font-bold text-accent">{distance} mi</div>
-            </div>
-
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <Clock className="w-5 h-5 text-secondary" />
-                <span className="text-sm text-muted-foreground">ETA</span>
-              </div>
-              <div className="text-2xl font-bold text-secondary">{eta}</div>
-            </div>
-
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <MapPin className="w-5 h-5 text-primary" />
-                <span className="text-sm text-muted-foreground">Status</span>
-              </div>
-              <Badge className="text-sm font-semibold">
-                {status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="mt-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-muted-foreground">Shipment Progress</span>
-              <span className="text-sm font-bold text-primary">{progress}%</span>
-            </div>
-            <div className="h-3 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-primary via-accent to-secondary transition-all duration-1000 ease-out rounded-full"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
+        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+          <span>Pickup</span>
+          <span className="capitalize">{currentStatus.replace('_', ' ')}</span>
+          <span>Delivery</span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
