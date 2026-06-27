@@ -25,8 +25,10 @@ type Shipment = Database['public']['Tables']['shipments']['Row'];
 type TrackingUpdate = Database['public']['Tables']['tracking_updates']['Row'];
 type Vehicle = Database['public']['Tables']['vehicles']['Row'];
 
+type PartialVehicle = Pick<Vehicle, 'make' | 'model' | 'year' | 'color'>;
+
 type ShipmentWithVehicle = Shipment & {
-  vehicles?: Vehicle | null;
+  vehicles?: PartialVehicle | null;
 };
 
 export default function TrackingPage() {

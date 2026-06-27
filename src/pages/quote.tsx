@@ -38,28 +38,28 @@ export default function QuotePage() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('quotes').insert([
-        {
-          customer_name: formData.customer_name,
-          customer_email: formData.customer_email,
-          customer_phone: formData.customer_phone || null,
-          pickup_address: formData.pickup_address,
-          pickup_city: "",
-          pickup_state: "",
-          pickup_zip: "",
-          delivery_address: formData.delivery_address,
-          delivery_city: "",
-          delivery_state: "",
-          delivery_zip: "",
-          shipping_type: formData.shipment_type as any,
-          vehicle_make: formData.vehicle_make || null,
-          vehicle_model: formData.vehicle_model || null,
-          vehicle_year: formData.vehicle_year ? parseInt(formData.vehicle_year) : 0,
-          preferred_pickup_date: formData.preferred_pickup_date || null,
-          notes: formData.additional_notes || null,
-          status: 'pending',
-        }
-      ]);
+      const quoteData = {
+        customer_name: formData.customer_name,
+        customer_email: formData.customer_email,
+        customer_phone: formData.customer_phone || null,
+        pickup_address: formData.pickup_address,
+        pickup_city: "",
+        pickup_state: "",
+        pickup_zip: "",
+        delivery_address: formData.delivery_address,
+        delivery_city: "",
+        delivery_state: "",
+        delivery_zip: "",
+        shipping_type: formData.shipment_type as any,
+        vehicle_make: formData.vehicle_make || "",
+        vehicle_model: formData.vehicle_model || "",
+        vehicle_year: formData.vehicle_year ? parseInt(formData.vehicle_year) : 0,
+        preferred_pickup_date: formData.preferred_pickup_date || null,
+        notes: formData.additional_notes || null,
+        status: 'pending' as const,
+      };
+
+      const { error } = await supabase.from('quotes').insert([quoteData as any]);
 
       if (error) throw error;
 
