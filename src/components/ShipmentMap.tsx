@@ -308,9 +308,55 @@ export function ShipmentMap({
   }, [shipmentId, routeData, calculateProgressFromStatus]);
 
   if (!process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || !process.env.NEXT_PUBLIC_HERE_MAPS_API_KEY) {
+    const missingKeys = [];
+    if (!process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN) missingKeys.push('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN');
+    if (!process.env.NEXT_PUBLIC_HERE_MAPS_API_KEY) missingKeys.push('NEXT_PUBLIC_HERE_MAPS_API_KEY');
+
     return (
-      <div className="bg-muted rounded-lg p-8 text-center">
-        <p className="text-destructive">Map configuration incomplete. Please configure Mapbox and HERE Maps API keys.</p>
+      <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-8 text-center">
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <Package className="w-8 h-8 text-yellow-600" />
+          <h3 className="text-xl font-bold text-yellow-900">Live GPS Tracking Configuration Required</h3>
+        </div>
+        <p className="text-yellow-800 mb-4">
+          To enable live GPS tracking with interactive maps and route calculation, please configure the following API keys:
+        </p>
+        <div className="bg-white rounded-lg p-4 mb-4 text-left max-w-2xl mx-auto">
+          <ul className="space-y-3 text-sm">
+            {missingKeys.includes('NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN') && (
+              <li className="flex items-start gap-2">
+                <span className="text-yellow-600 font-mono font-semibold mt-0.5">✗</span>
+                <div>
+                  <strong className="text-yellow-900">Mapbox Access Token</strong>
+                  <p className="text-yellow-700 text-xs mt-1">
+                    Sign up at <a href="https://account.mapbox.com/auth/signup/" target="_blank" rel="noopener noreferrer" className="underline">mapbox.com</a> → Get your access token → Add to <code className="bg-yellow-100 px-1 rounded">.env.local</code>
+                  </p>
+                  <code className="text-xs text-yellow-800 bg-yellow-100 px-2 py-1 rounded mt-1 block">
+                    NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your_token_here
+                  </code>
+                </div>
+              </li>
+            )}
+            {missingKeys.includes('NEXT_PUBLIC_HERE_MAPS_API_KEY') && (
+              <li className="flex items-start gap-2">
+                <span className="text-yellow-600 font-mono font-semibold mt-0.5">✗</span>
+                <div>
+                  <strong className="text-yellow-900">HERE Maps API Key</strong>
+                  <p className="text-yellow-700 text-xs mt-1">
+                    Sign up at <a href="https://platform.here.com/sign-up" target="_blank" rel="noopener noreferrer" className="underline">platform.here.com</a> → Create project → Get API key → Add to <code className="bg-yellow-100 px-1 rounded">.env.local</code>
+                  </p>
+                  <code className="text-xs text-yellow-800 bg-yellow-100 px-2 py-1 rounded mt-1 block">
+                    NEXT_PUBLIC_HERE_MAPS_API_KEY=your_key_here
+                  </code>
+                </div>
+              </li>
+            )}
+          </ul>
+        </div>
+        <div className="text-xs text-yellow-700">
+          <p className="mb-2">After adding API keys, restart the development server: <code className="bg-yellow-100 px-2 py-1 rounded">npm run dev</code></p>
+          <p>Both services offer free tiers suitable for development and testing.</p>
+        </div>
       </div>
     );
   }
