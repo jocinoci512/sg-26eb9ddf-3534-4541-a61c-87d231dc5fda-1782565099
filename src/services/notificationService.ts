@@ -18,6 +18,8 @@ interface CreateNotificationParams {
   message: string;
   type: 'shipment_created' | 'shipment_updated' | 'quote_received' | 'system_alert';
   metadata?: Record<string, any>;
+  customerId?: string;
+  shipmentId?: string;
 }
 
 export const notificationService = {
@@ -31,8 +33,8 @@ export const notificationService = {
         .insert([
           {
             user_id: params.userId,
-            customer_id: params.customerId,
-            shipment_id: params.shipmentId,
+            customer_id: params.customerId || params.metadata?.customer_id || null,
+            shipment_id: params.shipmentId || params.metadata?.shipment_id || null,
             type: params.type,
             title: params.title,
             message: params.message,
