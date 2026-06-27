@@ -11,6 +11,7 @@ import { useRouter } from "next/router";
 import { UserPlus, Loader2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function RegisterPage() {
   const router = useRouter();

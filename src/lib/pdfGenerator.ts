@@ -1,6 +1,6 @@
 /**
  * PDF Generation utilities for shipping labels and reports
- * This is a client-side implementation using browser APIs
+ * This is a client-side implementation using browser print API
  */
 
 export interface ShippingLabelData {
@@ -15,24 +15,25 @@ export interface ShippingLabelData {
   receiverCity: string;
   receiverState: string;
   receiverZip: string;
-  shipmentType: string;
-  shipmentDate: string;
+  shipmentType?: string;
+  shipmentDate?: string;
   estimatedDelivery?: string;
-  weight?: string;
   vehicleInfo?: string;
+  weight?: string;
+  serviceType?: string;
 }
 
 export interface MonthlyReportData {
   month: string;
-  year: number;
+  year: string;
   totalShipments: number;
   activeShipments: number;
   deliveredShipments: number;
   delayedShipments: number;
   cancelledShipments: number;
-  revenue: number;
-  topRoutes: Array<{ route: string; count: number }>;
-  shipmentTypes: Record<string, number>;
+  revenue?: number;
+  topRoutes?: Array<{ route: string; count: number }>;
+  shipmentTypes?: Array<{ type: string; count: number }>;
 }
 
 /**
@@ -43,152 +44,119 @@ export function generateShippingLabelHTML(data: ShippingLabelData): string {
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <title>Shipping Label - ${data.trackingNumber}</title>
   <style>
-    @page { size: 4in 6in; margin: 0; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @media print {
+      @page { margin: 0; }
+      body { margin: 0; }
+    }
     body {
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20mm;
+      background: white;
+    }
+    .label {
       width: 4in;
       height: 6in;
-      padding: 0.25in;
-      background: white;
+      border: 2px solid #000;
+      padding: 10mm;
+      box-sizing: border-box;
     }
     .header {
       text-align: center;
-      border-bottom: 3px solid #0B1F3A;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 5mm;
+      margin-bottom: 5mm;
+    }
+    .logo {
+      width: 60mm;
+      height: auto;
+      margin: 0 auto 3mm;
     }
     .company-name {
-      font-size: 20px;
+      font-size: 18pt;
       font-weight: bold;
       color: #0B1F3A;
-      margin-bottom: 5px;
+      margin-bottom: 2mm;
     }
     .tracking {
-      background: #0B1F3A;
-      color: white;
-      padding: 8px;
-      text-align: center;
-      font-size: 18px;
+      font-size: 24pt;
       font-weight: bold;
-      letter-spacing: 1px;
-      margin: 15px 0;
+      text-align: center;
+      margin: 5mm 0;
+      padding: 3mm;
+      background: #f0f0f0;
+      border: 1px solid #000;
     }
     .barcode {
       text-align: center;
-      margin: 10px 0;
-      padding: 10px;
-      border: 2px solid #0B1F3A;
-      font-family: 'Courier New', monospace;
-      font-size: 24px;
-      letter-spacing: 3px;
+      font-family: 'Libre Barcode 128', monospace;
+      font-size: 48pt;
+      margin: 3mm 0;
     }
     .section {
-      margin: 12px 0;
-      padding: 8px;
-      border: 1px solid #ddd;
+      margin: 3mm 0;
+      padding: 2mm;
+      border: 1px solid #ccc;
     }
     .section-title {
-      font-size: 10px;
       font-weight: bold;
+      font-size: 10pt;
+      margin-bottom: 1mm;
       color: #0B1F3A;
-      text-transform: uppercase;
-      margin-bottom: 5px;
     }
     .address {
-      font-size: 12px;
-      line-height: 1.4;
+      font-size: 11pt;
+      line-height: 1.3;
     }
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 10px;
-    }
-    .info-item {
-      font-size: 10px;
-    }
-    .info-label {
-      font-weight: bold;
-      color: #555;
-    }
-    .footer {
-      margin-top: 15px;
-      text-align: center;
-      font-size: 8px;
-      color: #888;
-      border-top: 1px solid #ddd;
-      padding-top: 8px;
+    .details {
+      font-size: 9pt;
+      margin-top: 2mm;
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="company-name">GO CARGO LOGISTICS</div>
-    <div style="font-size: 10px; color: #666;">Professional Vehicle & Freight Transportation</div>
-  </div>
-
-  <div class="tracking">${data.trackingNumber}</div>
-
-  <div class="barcode">||||| ${data.trackingNumber} |||||</div>
-
-  <div class="section">
-    <div class="section-title">Ship From</div>
-    <div class="address">
-      <div><strong>${data.senderName}</strong></div>
-      <div>${data.senderAddress}</div>
-      <div>${data.senderCity}, ${data.senderState} ${data.senderZip}</div>
+  <div class="label">
+    <div class="header">
+      <img src="/logo-main.png" alt="Go Cargo Logistics" class="logo">
+      <div class="company-name">GO CARGO LOGISTICS</div>
+      <div style="font-size: 9pt;">support@gocargologisticsus.com | +1 (940) 238-4915</div>
     </div>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Ship To</div>
-    <div class="address">
-      <div><strong>${data.receiverName}</strong></div>
-      <div>${data.receiverAddress}</div>
-      <div>${data.receiverCity}, ${data.receiverState} ${data.receiverZip}</div>
+    
+    <div class="tracking">${data.trackingNumber}</div>
+    <div class="barcode">*${data.trackingNumber}*</div>
+    
+    <div class="section">
+      <div class="section-title">FROM:</div>
+      <div class="address">
+        ${data.senderName}<br>
+        ${data.senderAddress}<br>
+        ${data.senderCity}, ${data.senderState} ${data.senderZip}
+      </div>
     </div>
-  </div>
-
-  <div class="info-grid">
-    <div class="info-item">
-      <div class="info-label">Service Type:</div>
-      <div>${data.shipmentType.replace(/_/g, ' ').toUpperCase()}</div>
+    
+    <div class="section">
+      <div class="section-title">TO:</div>
+      <div class="address">
+        ${data.receiverName}<br>
+        ${data.receiverAddress}<br>
+        ${data.receiverCity}, ${data.receiverState} ${data.receiverZip}
+      </div>
     </div>
-    <div class="info-item">
-      <div class="info-label">Ship Date:</div>
-      <div>${data.shipmentDate}</div>
+    
+    <div class="details">
+      ${data.shipmentType ? `<div><strong>Service:</strong> ${data.shipmentType}</div>` : ''}
+      ${data.shipmentDate ? `<div><strong>Ship Date:</strong> ${data.shipmentDate}</div>` : ''}
+      ${data.estimatedDelivery ? `<div><strong>Est. Delivery:</strong> ${data.estimatedDelivery}</div>` : ''}
+      ${data.vehicleInfo ? `<div><strong>Vehicle:</strong> ${data.vehicleInfo}</div>` : ''}
+      ${data.weight ? `<div><strong>Weight:</strong> ${data.weight}</div>` : ''}
     </div>
-    ${data.estimatedDelivery ? `
-    <div class="info-item">
-      <div class="info-label">Est. Delivery:</div>
-      <div>${data.estimatedDelivery}</div>
-    </div>
-    ` : ''}
-    ${data.weight ? `
-    <div class="info-item">
-      <div class="info-label">Weight:</div>
-      <div>${data.weight}</div>
-    </div>
-    ` : ''}
-  </div>
-
-  ${data.vehicleInfo ? `
-  <div class="section" style="margin-top: 10px;">
-    <div class="section-title">Vehicle Information</div>
-    <div style="font-size: 11px;">${data.vehicleInfo}</div>
-  </div>
-  ` : ''}
-
-  <div class="footer">
-    Go Cargo Logistics | gocargologisticsus.com | support@gocargologisticsus.com
   </div>
 </body>
 </html>
-  `;
+  `.trim();
 }
 
 /**
@@ -222,106 +190,120 @@ export function downloadShippingLabel(data: ShippingLabelData) {
  * Generate monthly report HTML
  */
 export function generateMonthlyReportHTML(data: MonthlyReportData): string {
+  const chartData = data.shipmentTypes || [];
+  const routesData = data.topRoutes || [];
+
   return `
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Monthly Report - ${data.month} ${data.year}</title>
+  <meta charset="UTF-8">
+  <title>Monthly Shipment Report - ${data.month} ${data.year}</title>
   <style>
-    @page { size: letter; margin: 0.5in; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    @media print {
+      @page { margin: 15mm; }
+    }
     body {
       font-family: Arial, sans-serif;
-      line-height: 1.6;
+      margin: 0;
+      padding: 20mm;
+      background: white;
       color: #333;
     }
     .header {
-      background: linear-gradient(135deg, #0B1F3A 0%, #1E5AA8 100%);
-      color: white;
-      padding: 30px;
       text-align: center;
-      margin-bottom: 30px;
+      border-bottom: 3px solid #0B1F3A;
+      padding-bottom: 10mm;
+      margin-bottom: 10mm;
+    }
+    .logo {
+      width: 80mm;
+      height: auto;
+      margin: 0 auto 5mm;
     }
     .company-name {
-      font-size: 28px;
+      font-size: 24pt;
       font-weight: bold;
-      margin-bottom: 10px;
+      color: #0B1F3A;
+      margin-bottom: 2mm;
     }
     .report-title {
-      font-size: 20px;
-      margin-bottom: 5px;
+      font-size: 20pt;
+      font-weight: bold;
+      margin: 5mm 0;
     }
     .report-period {
-      font-size: 16px;
-      opacity: 0.9;
+      font-size: 14pt;
+      color: #666;
     }
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-bottom: 30px;
+      gap: 5mm;
+      margin: 10mm 0;
     }
     .stat-card {
       border: 2px solid #0B1F3A;
-      padding: 20px;
+      padding: 5mm;
       text-align: center;
-      border-radius: 8px;
+      border-radius: 3mm;
     }
     .stat-value {
-      font-size: 36px;
+      font-size: 32pt;
       font-weight: bold;
-      color: #0B1F3A;
-      margin-bottom: 5px;
+      color: #1E5AA8;
     }
     .stat-label {
-      font-size: 14px;
+      font-size: 11pt;
       color: #666;
-      text-transform: uppercase;
+      margin-top: 2mm;
     }
     .section {
-      margin-bottom: 30px;
+      margin: 8mm 0;
     }
     .section-title {
-      font-size: 18px;
+      font-size: 16pt;
       font-weight: bold;
       color: #0B1F3A;
-      border-bottom: 2px solid #0B1F3A;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
+      margin-bottom: 3mm;
+      padding-bottom: 2mm;
+      border-bottom: 2px solid #e0e0e0;
     }
-    table {
+    .data-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 3mm;
     }
-    th, td {
-      padding: 12px;
+    .data-table th {
+      background: #0B1F3A;
+      color: white;
+      padding: 3mm;
       text-align: left;
-      border-bottom: 1px solid #ddd;
+      font-size: 11pt;
     }
-    th {
-      background: #f5f5f5;
-      font-weight: bold;
-      color: #0B1F3A;
+    .data-table td {
+      padding: 2mm 3mm;
+      border-bottom: 1px solid #e0e0e0;
+      font-size: 10pt;
     }
     .footer {
-      margin-top: 50px;
+      margin-top: 15mm;
+      padding-top: 5mm;
+      border-top: 2px solid #e0e0e0;
       text-align: center;
-      font-size: 12px;
-      color: #888;
-      border-top: 2px solid #ddd;
-      padding-top: 20px;
+      font-size: 9pt;
+      color: #666;
     }
   </style>
 </head>
 <body>
   <div class="header">
+    <img src="/logo-main.png" alt="Go Cargo Logistics" class="logo">
     <div class="company-name">GO CARGO LOGISTICS</div>
-    <div class="report-title">Monthly Performance Report</div>
+    <div class="report-title">Monthly Shipment Report</div>
     <div class="report-period">${data.month} ${data.year}</div>
   </div>
-
+  
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-value">${data.totalShipments}</div>
@@ -344,14 +326,15 @@ export function generateMonthlyReportHTML(data: MonthlyReportData): string {
       <div class="stat-label">Cancelled</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">$${data.revenue.toLocaleString()}</div>
-      <div class="stat-label">Revenue</div>
+      <div class="stat-value">${((data.deliveredShipments / data.totalShipments) * 100).toFixed(1)}%</div>
+      <div class="stat-label">Success Rate</div>
     </div>
   </div>
-
+  
+  ${routesData.length > 0 ? `
   <div class="section">
     <div class="section-title">Top Shipping Routes</div>
-    <table>
+    <table class="data-table">
       <thead>
         <tr>
           <th>Route</th>
@@ -359,7 +342,7 @@ export function generateMonthlyReportHTML(data: MonthlyReportData): string {
         </tr>
       </thead>
       <tbody>
-        ${data.topRoutes.map(route => `
+        ${routesData.map(route => `
           <tr>
             <td>${route.route}</td>
             <td>${route.count}</td>
@@ -368,36 +351,47 @@ export function generateMonthlyReportHTML(data: MonthlyReportData): string {
       </tbody>
     </table>
   </div>
-
+  ` : ''}
+  
+  ${chartData.length > 0 ? `
   <div class="section">
-    <div class="section-title">Shipments by Type</div>
-    <table>
+    <div class="section-title">Shipment Types Distribution</div>
+    <table class="data-table">
       <thead>
         <tr>
-          <th>Shipment Type</th>
+          <th>Type</th>
           <th>Count</th>
+          <th>Percentage</th>
         </tr>
       </thead>
       <tbody>
-        ${Object.entries(data.shipmentTypes).map(([type, count]) => `
+        ${chartData.map(item => `
           <tr>
-            <td>${type.replace(/_/g, ' ').toUpperCase()}</td>
-            <td>${count}</td>
+            <td>${item.type}</td>
+            <td>${item.count}</td>
+            <td>${((item.count / data.totalShipments) * 100).toFixed(1)}%</td>
           </tr>
         `).join('')}
       </tbody>
     </table>
   </div>
-
+  ` : ''}
+  
   <div class="footer">
-    <p><strong>Go Cargo Logistics</strong></p>
-    <p>Professional Vehicle & Freight Transportation</p>
-    <p>gocargologisticsus.com | support@gocargologisticsus.com</p>
-    <p>Report Generated: ${new Date().toLocaleDateString()}</p>
+    <div style="font-weight: bold;">Go Cargo Logistics</div>
+    <div>support@gocargologisticsus.com | +1 (940) 238-4915</div>
+    <div>gocargologisticsus.com</div>
+    <div style="margin-top: 3mm; color: #999;">
+      Generated on ${new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      })}
+    </div>
   </div>
 </body>
 </html>
-  `;
+  `.trim();
 }
 
 /**

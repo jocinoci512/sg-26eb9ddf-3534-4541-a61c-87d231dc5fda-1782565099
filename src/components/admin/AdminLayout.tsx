@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/NotificationBell";
 import { GlobalSearch } from "@/components/admin/GlobalSearch";
+import Image from "next/image";
 import { 
   LayoutDashboard, 
   Package, 

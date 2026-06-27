@@ -71,70 +71,74 @@ export async function sendEmail(data: EmailData): Promise<EmailResponse> {
 /**
  * Generate branded email HTML template
  */
-export function generateEmailTemplate(content: {
-  title: string;
-  body: string;
-  trackingNumber?: string;
-  trackingUrl?: string;
-  ctaText?: string;
-  ctaUrl?: string;
-}): string {
+export function generateEmailTemplate(params: EmailTemplateParams): string {
   return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${content.title}</title>
-  <style>
-    body { margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background-color: #f5f5f5; }
-    .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
-    .header { background: linear-gradient(135deg, #0B1F3A 0%, #123A6B 50%, #1E5AA8 100%); padding: 40px 30px; text-align: center; }
-    .logo { font-size: 24px; font-weight: bold; color: #ffffff; margin: 0; }
-    .content { padding: 40px 30px; }
-    .title { font-size: 24px; font-weight: bold; color: #0B1F3A; margin: 0 0 20px 0; }
-    .body { font-size: 16px; line-height: 1.6; color: #333333; margin: 0 0 20px 0; }
-    .tracking { background-color: #f0f4f8; border-radius: 8px; padding: 20px; margin: 20px 0; }
-    .tracking-number { font-size: 20px; font-weight: bold; color: #1E5AA8; font-family: monospace; }
-    .cta { display: inline-block; background: linear-gradient(135deg, #1E5AA8 0%, #0B1F3A 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; margin: 20px 0; }
-    .footer { background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb; }
-    .footer-text { font-size: 14px; color: #6b7280; margin: 5px 0; }
-    .contact { margin: 20px 0; }
-    .contact-item { display: inline-block; margin: 0 10px; font-size: 14px; color: #6b7280; }
-  </style>
+  <title>${params.title}</title>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1 class="logo">Go Cargo Logistics</h1>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f5f5f5;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <!-- Header with Logo -->
+    <div style="background: linear-gradient(135deg, #0B1F3A 0%, #123A6B 50%, #1E5AA8 100%); padding: 30px 20px; text-align: center;">
+      <img src="${process.env.NEXT_PUBLIC_SITE_URL || 'https://gocargologisticsus.com'}/logo-main.png" alt="Go Cargo Logistics" style="width: 120px; height: auto; margin-bottom: 15px;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">Go Cargo Logistics</h1>
+      <p style="color: rgba(255, 255, 255, 0.9); margin: 5px 0 0 0; font-size: 14px;">Professional Vehicle Transportation & Freight Services</p>
     </div>
     
-    <div class="content">
-      <h2 class="title">${content.title}</h2>
-      <div class="body">${content.body}</div>
+    <!-- Content -->
+    <div style="padding: 40px 30px;">
+      <h2 style="color: #0B1F3A; margin: 0 0 20px 0; font-size: 20px;">${params.title}</h2>
       
-      ${content.trackingNumber ? `
-        <div class="tracking">
-          <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">Tracking Number</p>
-          <div class="tracking-number">${content.trackingNumber}</div>
-        </div>
-      ` : ''}
-      
-      ${content.ctaText && content.ctaUrl ? `
-        <a href="${content.ctaUrl}" class="cta">${content.ctaText}</a>
-      ` : ''}
-    </div>
-    
-    <div class="footer">
-      <p class="footer-text"><strong>Go Cargo Logistics</strong></p>
-      <div class="contact">
-        <span class="contact-item">📧 support@gocargologisticsus.com</span>
-        <span class="contact-item">📞 +1 (940) 238-4915</span>
+      <div style="color: #333333; line-height: 1.6; font-size: 15px; margin-bottom: 30px;">
+        ${params.body.split('\n').map(line => `<p style="margin: 10px 0;">${line}</p>`).join('')}
       </div>
-      <p class="footer-text">
-        Professional Vehicle Transportation & Freight Services
+      
+      ${params.trackingNumber ? `
+      <div style="background-color: #f8f9fa; border-left: 4px solid #1E5AA8; padding: 15px 20px; margin: 20px 0;">
+        <p style="margin: 0; color: #666; font-size: 13px;">Tracking Number</p>
+        <p style="margin: 5px 0 0 0; font-size: 24px; font-weight: bold; color: #0B1F3A; font-family: monospace;">${params.trackingNumber}</p>
+      </div>
+      ` : ''}
+      
+      ${params.ctaText && params.ctaUrl ? `
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${params.ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #1E5AA8 0%, #123A6B 100%); color: #ffffff; text-decoration: none; padding: 14px 35px; border-radius: 6px; font-weight: bold; font-size: 15px;">${params.ctaText}</a>
+      </div>
+      ` : ''}
+      
+      ${params.trackingUrl ? `
+      <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
+        <p style="margin: 0 0 8px 0; color: #666; font-size: 13px;">Track your shipment:</p>
+        <a href="${params.trackingUrl}" style="color: #1E5AA8; text-decoration: none; word-break: break-all; font-size: 14px;">${params.trackingUrl}</a>
+      </div>
+      ` : ''}
+    </div>
+    
+    <!-- Footer -->
+    <div style="background-color: #0B1F3A; color: #ffffff; padding: 30px 30px 20px 30px; text-align: center;">
+      <div style="margin-bottom: 20px;">
+        <img src="${process.env.NEXT_PUBLIC_SITE_URL || 'https://gocargologisticsus.com'}/logo-main.png" alt="Go Cargo Logistics" style="width: 80px; height: auto; opacity: 0.9;">
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <p style="margin: 5px 0; font-size: 14px; font-weight: bold;">Go Cargo Logistics</p>
+        <p style="margin: 5px 0; font-size: 13px; opacity: 0.8;">Professional Vehicle Transportation & Freight Services</p>
+      </div>
+      
+      <div style="margin: 15px 0; padding: 15px 0; border-top: 1px solid rgba(255, 255, 255, 0.2); border-bottom: 1px solid rgba(255, 255, 255, 0.2);">
+        <p style="margin: 5px 0; font-size: 13px;"><strong>📧</strong> support@gocargologisticsus.com</p>
+        <p style="margin: 5px 0; font-size: 13px;"><strong>📞</strong> +1 (940) 238-4915</p>
+        <p style="margin: 5px 0; font-size: 13px;"><strong>🌐</strong> <a href="https://gocargologisticsus.com" style="color: #ffffff; text-decoration: none;">gocargologisticsus.com</a></p>
+      </div>
+      
+      <p style="margin: 15px 0 5px 0; font-size: 11px; opacity: 0.7;">
+        © ${new Date().getFullYear()} Go Cargo Logistics. All rights reserved.
       </p>
-      <p class="footer-text" style="margin-top: 20px; font-size: 12px;">
+      <p style="margin: 5px 0; font-size: 11px; opacity: 0.7;">
         This is an automated notification. Please do not reply to this email.
       </p>
     </div>

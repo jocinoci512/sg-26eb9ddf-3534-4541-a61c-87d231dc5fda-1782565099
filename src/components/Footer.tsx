@@ -1,22 +1,28 @@
 import Link from "next/link";
 import { Package, Mail, Phone, MapPin } from "lucide-react";
+import Image from "next/image";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-slate-900 text-white">
+    <footer className="bg-gradient-to-br from-primary via-secondary to-accent text-white">
       <div className="container py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           <div>
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-lg flex items-center justify-center">
-                <Package className="w-6 h-6 text-white" />
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative w-12 h-12">
+                <Image
+                  src="/logo-main.png"
+                  alt="Go Cargo Logistics"
+                  fill
+                  className="object-contain brightness-0 invert"
+                />
               </div>
               <span className="text-xl font-bold">Go Cargo Logistics</span>
             </div>
-            <p className="text-gray-400 mb-6">
-              Professional shipping and logistics services for vehicles, freight, and international cargo.
+            <p className="text-white/80 mb-6">
+              Professional vehicle transportation and freight services worldwide. Your trusted logistics partner.
             </p>
             <div className="flex flex-col gap-3 text-sm">
               <div className="flex items-center gap-2 text-gray-400">
