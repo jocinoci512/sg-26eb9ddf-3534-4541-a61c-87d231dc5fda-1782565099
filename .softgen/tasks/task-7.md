@@ -1,6 +1,6 @@
 ---
 title: Service Pages & Content
-status: in_progress
+status: done
 priority: medium
 type: feature
 tags: [content, pages, public]
@@ -17,9 +17,9 @@ Public informational pages: About Us, Services, Contact, FAQ. Essential for SEO 
 - [x] Create Services overview page with all offerings
 - [x] Create Contact page with form and company details
 - [x] Create FAQ page with accordion component
-- [ ] Add Terms & Conditions page
-- [ ] Add Privacy Policy page
-- [ ] Create vehicle shipping service pages
+- [x] Add Terms & Conditions page
+- [x] Add Privacy Policy page
+- [x] Create vehicle shipping service pages
 
 ## Acceptance
 - All service pages display correct content

@@ -1,6 +1,6 @@
 ---
 title: Admin Dashboard Foundation
-status: in_progress
+status: done
 priority: high
 type: feature
 tags: [admin, dashboard, management]
@@ -18,8 +18,8 @@ Secure admin panel for managing shipments, quotes, customers, and viewing analyt
 - [x] Display analytics cards with real-time data
 - [x] Create shipments management page (list, create, edit, delete)
 - [x] Build quote management page with approve/reject workflow
-- [ ] Add customers list page
-- [ ] Create shipment detail page with full CRUD
+- [x] Add customers list page
+- [x] Create shipment detail page with full CRUD
 
 ## Acceptance
 - Only authenticated staff can access admin routes
