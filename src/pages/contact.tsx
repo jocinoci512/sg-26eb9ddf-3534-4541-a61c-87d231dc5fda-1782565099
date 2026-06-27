@@ -1,64 +1,72 @@
+import { useState, FormEvent } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState } from "react";
-import { Mail, Phone, MapPin, Clock } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
+import { Mail, Phone, MapPin, Send, Loader2 } from "lucide-react";
+import { sendContactFormNotification } from "@/lib/resend";
+import { supabase } from "@/integrations/supabase/client";
 
-export default function ContactPage() {
-  const { toast } = useToast();
+export default function Contact() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  });
+  const { toast } = useToast();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('contact_messages').insert([
+      // Save to database
+      const { error: dbError } = await supabase.from('contact_messages').insert([
         {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone || null,
-          subject: formData.subject,
-          message: formData.message,
-          status: 'new',
+          name,
+          email,
+          phone,
+          subject,
+          message,
         }
       ]);
 
-      if (error) throw error;
+      if (dbError) throw dbError;
 
-      setSubmitted(true);
-      toast({
-        title: "Message Sent!",
-        description: "We'll get back to you within 24 hours.",
+      // Send notification email to support@gocargologisticsus.com
+      const emailResult = await sendContactFormNotification({
+        name,
+        email,
+        phone,
+        subject,
+        message,
       });
-      setFormData({ name: "", email: "", phone: "", subject: "", message: "" });
-    } catch (error) {
+
+      if (!emailResult.success) {
+        console.error('Email notification failed:', emailResult.error);
+      }
+
+      toast({
+        title: "Message sent successfully!",
+        description: "We'll get back to you as soon as possible.",
+      });
+
+      // Reset form
+      setName("");
+      setEmail("");
+      setPhone("");
+      setSubject("");
+      setMessage("");
+    } catch (error: any) {
       console.error('Contact form error:', error);
       toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
+        title: "Failed to send message",
+        description: error.message || "Please try again later",
         variant: "destructive",
       });
     } finally {
@@ -129,8 +137,8 @@ export default function ContactPage() {
                     id="name"
                     name="name"
                     required
-                    value={formData.name}
-                    onChange={handleChange}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     placeholder="John Doe"
                   />
                 </div>
@@ -142,8 +150,8 @@ export default function ContactPage() {
                     name="email"
                     type="email"
                     required
-                    value={formData.email}
-                    onChange={handleChange}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="john@example.com"
                   />
                 </div>
@@ -154,8 +162,8 @@ export default function ContactPage() {
                     id="phone"
                     name="phone"
                     type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     placeholder="+1 (555) 123-4567"
                   />
                 </div>
@@ -166,8 +174,8 @@ export default function ContactPage() {
                     id="subject"
                     name="subject"
                     required
-                    value={formData.subject}
-                    onChange={handleChange}
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
                     placeholder="How can we help?"
                   />
                 </div>
@@ -178,8 +186,8 @@ export default function ContactPage() {
                     id="message"
                     name="message"
                     required
-                    value={formData.message}
-                    onChange={handleChange}
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
                     rows={6}
                     placeholder="Tell us more about your inquiry..."
                   />

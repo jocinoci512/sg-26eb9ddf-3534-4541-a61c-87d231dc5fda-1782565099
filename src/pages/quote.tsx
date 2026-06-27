@@ -1,117 +1,119 @@
+import { useState, FormEvent } from "react";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Package, CheckCircle2, Loader2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { Package, Loader2 } from "lucide-react";
+import { sendQuoteRequestNotification } from "@/lib/resend";
+import { supabase } from "@/integrations/supabase/client";
 
-export default function QuotePage() {
-  const { toast } = useToast();
+export default function Quote() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupCity, setPickupCity] = useState("");
+  const [pickupState, setPickupState] = useState("");
+  const [pickupZip, setPickupZip] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryCity, setDeliveryCity] = useState("");
+  const [deliveryState, setDeliveryState] = useState("");
+  const [deliveryZip, setDeliveryZip] = useState("");
+  const [shipmentType, setShipmentType] = useState("");
+  const [vehicleMake, setVehicleMake] = useState("");
+  const [vehicleModel, setVehicleModel] = useState("");
+  const [vehicleYear, setVehicleYear] = useState("");
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState({
-    customer_name: "",
-    customer_email: "",
-    customer_phone: "",
-    pickup_address: "",
-    delivery_address: "",
-    shipment_type: "",
-    vehicle_make: "",
-    vehicle_model: "",
-    vehicle_year: "",
-    preferred_pickup_date: "",
-    additional_notes: "",
-  });
+  const { toast } = useToast();
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const quoteData = {
-        customer_name: formData.customer_name,
-        customer_email: formData.customer_email,
-        customer_phone: formData.customer_phone || null,
-        pickup_address: formData.pickup_address,
-        pickup_city: "",
-        pickup_state: "",
-        pickup_zip: "",
-        delivery_address: formData.delivery_address,
-        delivery_city: "",
-        delivery_state: "",
-        delivery_zip: "",
-        shipping_type: formData.shipment_type as any,
-        vehicle_make: formData.vehicle_make || "",
-        vehicle_model: formData.vehicle_model || "",
-        vehicle_year: formData.vehicle_year ? parseInt(formData.vehicle_year) : 0,
-        preferred_pickup_date: formData.preferred_pickup_date || null,
-        notes: formData.additional_notes || null,
-        status: 'pending' as const,
-      };
+      // Save quote to database
+      const { error: dbError } = await supabase.from('quotes').insert([
+        {
+          customer_name: name,
+          customer_email: email,
+          customer_phone: phone,
+          pickup_address: pickupAddress,
+          pickup_city: pickupCity,
+          pickup_state: pickupState,
+          pickup_zip: pickupZip,
+          delivery_address: deliveryAddress,
+          delivery_city: deliveryCity,
+          delivery_state: deliveryState,
+          delivery_zip: deliveryZip,
+          shipment_type: shipmentType,
+          vehicle_make: vehicleMake,
+          vehicle_model: vehicleModel,
+          vehicle_year: vehicleYear ? parseInt(vehicleYear) : null,
+          notes,
+          status: 'pending',
+        }
+      ]);
 
-      const { error } = await supabase.from('quotes').insert([quoteData as any]);
+      if (dbError) throw dbError;
 
-      if (error) throw error;
+      // Send notification email to support@gocargologisticsus.com
+      const pickupLocation = `${pickupAddress}, ${pickupCity}, ${pickupState} ${pickupZip}`;
+      const deliveryLocation = `${deliveryAddress}, ${deliveryCity}, ${deliveryState} ${deliveryZip}`;
+      const vehicleInfo = vehicleMake && vehicleModel ? `${vehicleYear} ${vehicleMake} ${vehicleModel}` : undefined;
 
-      setSubmitted(true);
-      toast({
-        title: "Quote Request Submitted",
-        description: "We'll get back to you within 24 hours with a detailed quote.",
+      const emailResult = await sendQuoteRequestNotification({
+        name,
+        email,
+        phone,
+        pickupLocation,
+        deliveryLocation,
+        vehicleInfo,
+        shipmentType: shipmentType || 'Vehicle Transport',
       });
-    } catch (error) {
-      console.error('Quote submission error:', error);
+
+      if (!emailResult.success) {
+        console.error('Email notification failed:', emailResult.error);
+      }
+
       toast({
-        title: "Error",
-        description: "Failed to submit quote request. Please try again.",
+        title: "Quote request submitted!",
+        description: "We'll review your request and send you a quote within 24 hours.",
+      });
+
+      // Reset form
+      setName("");
+      setEmail("");
+      setPhone("");
+      setPickupAddress("");
+      setPickupCity("");
+      setPickupState("");
+      setPickupZip("");
+      setDeliveryAddress("");
+      setDeliveryCity("");
+      setDeliveryState("");
+      setDeliveryZip("");
+      setShipmentType("");
+      setVehicleMake("");
+      setVehicleModel("");
+      setVehicleYear("");
+      setNotes("");
+    } catch (error: any) {
+      console.error('Quote form error:', error);
+      toast({
+        title: "Failed to submit quote",
+        description: error.message || "Please try again later",
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
   };
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navigation />
-        <section className="flex-1 flex items-center justify-center py-20 bg-muted/30">
-          <Card className="max-w-md mx-4">
-            <CardContent className="pt-12 pb-12 text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-10 h-10 text-green-600" />
-              </div>
-              <h2 className="text-2xl font-bold mb-4">Quote Request Submitted!</h2>
-              <p className="text-muted-foreground mb-6">
-                Thank you for your interest. Our team will review your request and send you a detailed quote within 24 hours.
-              </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                Check your email at <strong>{formData.customer_email}</strong> for updates.
-              </p>
-              <div className="flex gap-3 justify-center">
-                <Button onClick={() => setSubmitted(false)} variant="outline">
-                  Submit Another Quote
-                </Button>
-                <Button onClick={() => window.location.href = '/'}>
-                  Return to Home
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-        <Footer />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -145,8 +147,8 @@ export default function QuotePage() {
                       <Input
                         id="customer_name"
                         required
-                        value={formData.customer_name}
-                        onChange={(e) => handleChange('customer_name', e.target.value)}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
                         placeholder="John Doe"
                       />
                     </div>
@@ -156,8 +158,8 @@ export default function QuotePage() {
                         id="customer_email"
                         type="email"
                         required
-                        value={formData.customer_email}
-                        onChange={(e) => handleChange('customer_email', e.target.value)}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         placeholder="john@example.com"
                       />
                     </div>
@@ -168,8 +170,8 @@ export default function QuotePage() {
                       id="customer_phone"
                       type="tel"
                       required
-                      value={formData.customer_phone}
-                      onChange={(e) => handleChange('customer_phone', e.target.value)}
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
                       placeholder="+1 (555) 123-4567"
                     />
                   </div>
@@ -183,8 +185,8 @@ export default function QuotePage() {
                       <Textarea
                         id="pickup_address"
                         required
-                        value={formData.pickup_address}
-                        onChange={(e) => handleChange('pickup_address', e.target.value)}
+                        value={pickupAddress}
+                        onChange={(e) => setPickupAddress(e.target.value)}
                         placeholder="123 Main St, City, State ZIP"
                         rows={3}
                       />
@@ -194,8 +196,8 @@ export default function QuotePage() {
                       <Textarea
                         id="delivery_address"
                         required
-                        value={formData.delivery_address}
-                        onChange={(e) => handleChange('delivery_address', e.target.value)}
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
                         placeholder="456 Oak Ave, City, State ZIP"
                         rows={3}
                       />
@@ -206,8 +208,8 @@ export default function QuotePage() {
                       <Label htmlFor="shipment_type">Shipment Type *</Label>
                       <Select
                         required
-                        value={formData.shipment_type}
-                        onValueChange={(value) => handleChange('shipment_type', value)}
+                        value={shipmentType}
+                        onValueChange={(value) => setShipmentType(value)}
                       >
                         <SelectTrigger id="shipment_type">
                           <SelectValue placeholder="Select type" />
