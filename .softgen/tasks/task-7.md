@@ -1,28 +1,25 @@
 ---
 title: Service Pages & Content
-status: todo
+status: in_progress
 priority: medium
 type: feature
-tags: [content, services]
+tags: [content, pages, public]
 created_by: agent
 created_at: 2026-06-26T23:59:37Z
 position: 7
 ---
 
 ## Notes
-Dedicated pages for each service (vehicle shipping, freight, international) plus About, Contact, FAQ, Terms, Privacy pages.
+Public informational pages: About Us, Services, Contact, FAQ. Essential for SEO and customer trust.
 
 ## Checklist
-- [ ] Create About Us page
-- [ ] Build Services overview page
-- [ ] Add Vehicle Shipping service page
-- [ ] Create Freight Services page
-- [ ] Build International Shipping page
-- [ ] Add Contact page with form
-- [ ] Create FAQ page with categories
-- [ ] Build Privacy Policy page
+- [x] Create About Us page with company story and team
+- [x] Create Services overview page with all offerings
+- [x] Create Contact page with form and company details
+- [x] Create FAQ page with accordion component
 - [ ] Add Terms & Conditions page
-- [ ] Create Testimonials page
+- [ ] Add Privacy Policy page
+- [ ] Create vehicle shipping service pages
 
 ## Acceptance
 - All service pages display correct content
