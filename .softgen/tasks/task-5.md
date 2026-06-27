@@ -13,12 +13,12 @@ position: 5
 Secure admin panel for managing shipments, quotes, customers, and viewing analytics.
 
 ## Checklist
-- [ ] Create admin login/authentication check
-- [ ] Build admin dashboard layout with sidebar navigation
-- [ ] Create shipments management page (list, create, edit, delete)
-- [ ] Build quote management page with approve/reject workflow
+- [x] Create admin login/authentication check
+- [x] Build admin dashboard layout with sidebar navigation
+- [x] Display analytics cards with real-time data
+- [x] Create shipments management page (list, create, edit, delete)
+- [x] Build quote management page with approve/reject workflow
 - [ ] Add customers list page
-- [ ] Display analytics cards with real-time data
 - [ ] Create shipment detail page with full CRUD
 
 ## Acceptance
