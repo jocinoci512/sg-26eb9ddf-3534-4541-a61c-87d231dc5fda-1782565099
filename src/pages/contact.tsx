@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Mail, Phone, MapPin, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 export default function ContactPage() {
   const { toast } = useToast();
@@ -69,12 +70,17 @@ export default function ContactPage() {
     <div className="min-h-screen flex flex-col">
       <Navigation />
 
-      <section className="hero-gradient text-white py-16">
-        <div className="container text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Contact Us</h1>
-          <p className="text-xl text-white/90">
-            Get in touch with our team for quotes, support, or inquiries
-          </p>
+      <section className="py-16 hero-gradient text-white">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center">
+            <Badge className="mb-4 bg-white/20 text-white border-white/30 backdrop-blur-sm">Contact Us</Badge>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Get In Touch
+            </h1>
+            <p className="text-lg text-white/90">
+              Have questions? Our logistics experts are here to help you with your shipping needs
+            </p>
+          </div>
         </div>
       </section>
 

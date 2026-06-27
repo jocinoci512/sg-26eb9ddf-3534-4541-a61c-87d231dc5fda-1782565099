@@ -14,6 +14,7 @@ import {
   Globe,
   CheckCircle2
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function ServicesPage() {
   const services = [
@@ -82,12 +83,17 @@ export default function ServicesPage() {
     <div className="min-h-screen flex flex-col">
       <Navigation />
 
-      <section className="hero-gradient text-white py-16">
-        <div className="container text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Our Services</h1>
-          <p className="text-xl text-white/90 max-w-3xl mx-auto">
-            Comprehensive logistics solutions for all your shipping needs
-          </p>
+      <section className="py-16 hero-gradient text-white">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center">
+            <Badge className="mb-4 bg-white/20 text-white border-white/30 backdrop-blur-sm">Our Services</Badge>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Comprehensive Logistics Solutions
+            </h1>
+            <p className="text-lg text-white/90">
+              From vehicle transport to international freight, we handle all your shipping needs with professionalism and care
+            </p>
+          </div>
         </div>
       </section>
 
