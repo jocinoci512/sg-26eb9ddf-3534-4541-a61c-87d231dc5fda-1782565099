@@ -170,6 +170,8 @@ export default function QuotesManagementPage() {
         .insert([{
           customer_id: customerId,
           vehicle_id: vehicleId,
+          sender_name: selectedQuote.customer_name,
+          receiver_name: selectedQuote.customer_name,
           pickup_address_line1: selectedQuote.pickup_address,
           pickup_city: selectedQuote.pickup_city || '',
           pickup_state: selectedQuote.pickup_state || '',
