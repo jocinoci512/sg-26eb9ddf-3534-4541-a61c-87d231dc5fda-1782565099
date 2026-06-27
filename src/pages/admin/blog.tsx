@@ -83,7 +83,7 @@ export default function BlogManagementPage() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPosts(data || []);
+      setPosts((data || []) as BlogPost[]);
     } catch (error: any) {
       console.error('Load posts error:', error);
       toast({
