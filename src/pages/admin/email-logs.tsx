@@ -3,6 +3,7 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -13,7 +14,7 @@ import {
 } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { sendEmail } from "@/lib/resend";
-import { Mail, RefreshCw, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Mail, RefreshCw, Loader2, CheckCircle2, XCircle, Clock, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface EmailLog {
@@ -85,21 +86,13 @@ export default function EmailLogsPage() {
   const handleRetry = async (logId: string) => {
     setRetrying(logId);
     try {
-      const result = await sendEmail(logId);
-
-      if (result.success) {
-        toast({
-          title: "Email Resent",
-          description: "Email has been queued for delivery",
-        });
-        await loadLogs();
-      } else {
-        toast({
-          title: "Retry Failed",
-          description: result.error || "Failed to resend email",
-          variant: "destructive",
-        });
-      }
+      // Note: Automated retry would require storing original email data
+      // For now, show message that admin should trigger action in source system
+      toast({
+        title: "Manual Intervention Required",
+        description: "Please trigger the action again in the source system (e.g., update shipment status)",
+        variant: "default",
+      });
     } catch (error: any) {
       toast({
         title: "Error",
