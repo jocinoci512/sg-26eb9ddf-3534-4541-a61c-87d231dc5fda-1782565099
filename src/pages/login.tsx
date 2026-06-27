@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useState, FormEvent } from "react";
 import { authService } from "@/services/authService";
 import { useRouter } from "next/router";
-import { LogIn, Loader2, Package } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import Image from "next/image";
@@ -56,7 +56,13 @@ export default function LoginPage() {
           <div className="max-w-md mx-auto">
             <div className="text-center mb-8">
               <div className="w-16 h-16 rounded-full hero-gradient mx-auto mb-4 flex items-center justify-center">
-                <Package className="w-8 h-8 text-white" />
+                <Image
+                  src="/logo-main.png"
+                  alt="Go Cargo Logistics"
+                  width={64}
+                  height={64}
+                  className="object-contain"
+                />
               </div>
               <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
               <p className="text-muted-foreground">

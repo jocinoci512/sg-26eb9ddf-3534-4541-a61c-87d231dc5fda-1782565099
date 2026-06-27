@@ -1,50 +1,32 @@
-import { Navigation } from "@/components/Navigation";
-import { Footer } from "@/components/Footer";
+import { useState, FormEvent } from "react";
+import { useRouter } from "next/router";
+import Link from "next/link";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { useState } from "react";
-import { authService } from "@/services/authService";
-import { useRouter } from "next/router";
-import { UserPlus, Loader2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
 import Image from "next/image";
 
-export default function RegisterPage() {
+export default function Register() {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    password: "",
-    confirmPassword: "",
-  });
 
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       toast({
-        title: "Password Mismatch",
-        description: "Passwords do not match. Please try again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      toast({
-        title: "Weak Password",
-        description: "Password must be at least 8 characters long.",
+        title: "Password mismatch",
+        description: "Passwords do not match",
         variant: "destructive",
       });
       return;
@@ -52,145 +34,72 @@ export default function RegisterPage() {
 
     setLoading(true);
 
-    const { user, error } = await authService.signUp(
-      formData.email,
-      formData.password,
-      formData.fullName
-    );
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          }
+        }
+      });
 
-    if (error) {
+      if (authError) throw authError;
+
+      if (authData.user) {
+        const { error: customerError } = await supabase
+          .from('customers')
+          .insert([
+            {
+              user_id: authData.user.id,
+              full_name: fullName,
+              email,
+              phone,
+            }
+          ]);
+
+        if (customerError) throw customerError;
+
+        toast({
+          title: "Registration successful",
+          description: "Please check your email to verify your account",
+        });
+
+        setTimeout(() => {
+          router.push('/portal/login');
+        }, 2000);
+      }
+    } catch (error: any) {
       toast({
-        title: "Registration Failed",
+        title: "Registration failed",
         description: error.message,
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-      return;
     }
-
-    if (user) {
-      toast({
-        title: "Account Created!",
-        description: "Welcome to Go Cargo Logistics. Please check your email to verify your account.",
-      });
-      router.push('/portal/dashboard');
-    }
-
-    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navigation />
-
-      <section className="py-16 min-h-screen flex items-center bg-muted/30">
-        <div className="container">
-          <div className="max-w-md mx-auto">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 rounded-full hero-gradient mx-auto mb-4 flex items-center justify-center">
-                <Package className="w-8 h-8 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold mb-2">Create Your Account</h1>
-              <p className="text-muted-foreground">
-                Get started with Go Cargo Logistics today
-              </p>
+    <div className="min-h-screen bg-gradient-to-br from-primary via-secondary to-accent flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center space-y-4">
+          <div className="flex justify-center">
+            <div className="relative w-24 h-24">
+              <Image
+                src="/logo-main.png"
+                alt="Go Cargo Logistics"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
-
-            <Card className="shadow-xl">
-              <CardContent className="pt-6">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      required
-                      value={formData.fullName}
-                      onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
-                      placeholder="John Doe"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      required
-                      value={formData.email}
-                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="you@example.com"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="phone">Phone Number (Optional)</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="+1 (555) 123-4567"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="password">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      required
-                      value={formData.password}
-                      onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                      placeholder="••••••••"
-                      minLength={6}
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      required
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      placeholder="••••••••"
-                      minLength={6}
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full btn-gradient text-white"
-                    disabled={loading}
-                    size="lg"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Creating account...
-                      </>
-                    ) : (
-                      'Create Account'
-                    )}
-                  </Button>
-                </form>
-
-                <div className="mt-6 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Already have an account?{' '}
-                    <Link href="/login" className="text-primary hover:underline font-medium">
-                      Sign in
-                    </Link>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
           </div>
-        </div>
-      </section>
-
-      <Footer />
+          <CardTitle className="text-2xl">Create Account</CardTitle>
+          <CardDescription>Join Go Cargo Logistics today</CardDescription>
+        </CardHeader>
+      </Card>
     </div>
   );
 }
