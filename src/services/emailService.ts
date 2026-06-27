@@ -100,7 +100,7 @@ export const emailService = {
       // Create notification
       if (shipment.customers?.user_id) {
         await notificationService.createNotification({
-          user_id: shipment.customers.user_id,
+          userId: shipment.customers.user_id,
           title: subject,
           message: bodyText.substring(0, 200),
           type: 'shipment_updated',
