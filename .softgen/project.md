@@ -33,6 +33,10 @@ Premium dark blue enterprise design with authoritative trust signals.
 ✅ **Automated email notifications for status changes**
 ✅ **Printable PDF shipping labels**
 ✅ **Monthly reports & analytics with PDF export**
+✅ **Global search bar (⌘K) across all entities**
+✅ **Public blog with SEO optimization**
+✅ **Email service integration (Resend)**
+✅ **Email logs dashboard with retry functionality**
 ✅ Customer portal with Supabase authentication
 ✅ Admin dashboard (shipments, quotes, customers, analytics, reports)
 ✅ Quote request system with approval workflow
@@ -58,3 +62,6 @@ Premium dark blue enterprise design with authoritative trust signals.
 - ✅ Email notification automation
 - ✅ PDF generation (labels & reports)
 - ✅ Monthly analytics & reporting
+- ✅ Global search functionality
+- ✅ Blog CMS with public frontend
+- ✅ Email delivery monitoring
