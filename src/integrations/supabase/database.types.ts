@@ -48,6 +48,60 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_daily: {
+        Row: {
+          avg_pages_per_session: number | null
+          avg_session_duration_minutes: number | null
+          bounce_rate: number | null
+          created_at: string | null
+          date: string
+          device_breakdown: Json | null
+          id: string
+          new_users: number | null
+          returning_users: number | null
+          top_pages: Json | null
+          total_page_views: number | null
+          total_sessions: number | null
+          traffic_sources: Json | null
+          unique_visitors: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avg_pages_per_session?: number | null
+          avg_session_duration_minutes?: number | null
+          bounce_rate?: number | null
+          created_at?: string | null
+          date: string
+          device_breakdown?: Json | null
+          id?: string
+          new_users?: number | null
+          returning_users?: number | null
+          top_pages?: Json | null
+          total_page_views?: number | null
+          total_sessions?: number | null
+          traffic_sources?: Json | null
+          unique_visitors?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avg_pages_per_session?: number | null
+          avg_session_duration_minutes?: number | null
+          bounce_rate?: number | null
+          created_at?: string | null
+          date?: string
+          device_breakdown?: Json | null
+          id?: string
+          new_users?: number | null
+          returning_users?: number | null
+          top_pages?: Json | null
+          total_page_views?: number | null
+          total_sessions?: number | null
+          traffic_sources?: Json | null
+          unique_visitors?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       blog_categories: {
         Row: {
           created_at: string | null
@@ -542,6 +596,68 @@ export type Database = {
             columns: ["shipment_id"]
             isOneToOne: false
             referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      page_views: {
+        Row: {
+          browser: string | null
+          country: string | null
+          created_at: string | null
+          customer_id: string | null
+          device_type: string | null
+          duration_seconds: number | null
+          id: string
+          ip_address: string | null
+          os: string | null
+          page_path: string
+          page_title: string | null
+          referrer: string | null
+          session_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser?: string | null
+          country?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: string | null
+          os?: string | null
+          page_path: string
+          page_title?: string | null
+          referrer?: string | null
+          session_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser?: string | null
+          country?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          ip_address?: string | null
+          os?: string | null
+          page_path?: string
+          page_title?: string | null
+          referrer?: string | null
+          session_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -1045,6 +1161,80 @@ export type Database = {
             columns: ["shipment_id"]
             isOneToOne: false
             referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_sessions: {
+        Row: {
+          browser: string | null
+          country: string | null
+          created_at: string | null
+          customer_id: string | null
+          device_type: string | null
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          is_returning_user: boolean | null
+          os: string | null
+          pages_visited: number | null
+          referrer: string | null
+          session_id: string
+          started_at: string | null
+          updated_at: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          browser?: string | null
+          country?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          device_type?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          is_returning_user?: boolean | null
+          os?: string | null
+          pages_visited?: number | null
+          referrer?: string | null
+          session_id: string
+          started_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          browser?: string | null
+          country?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          device_type?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          is_returning_user?: boolean | null
+          os?: string | null
+          pages_visited?: number | null
+          referrer?: string | null
+          session_id?: string
+          started_at?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]

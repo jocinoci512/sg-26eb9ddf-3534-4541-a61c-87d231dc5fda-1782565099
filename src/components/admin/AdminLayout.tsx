@@ -78,6 +78,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     { name: 'Quotes', href: '/admin/quotes', icon: FileText },
     { name: 'Customers', href: '/admin/customers', icon: Users },
     { name: 'Reports', href: '/admin/reports', icon: FileText },
+    { name: 'Analytics', href: '/admin/analytics', icon: Package },
     { name: 'Email Logs', href: '/admin/email-logs', icon: Package },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
