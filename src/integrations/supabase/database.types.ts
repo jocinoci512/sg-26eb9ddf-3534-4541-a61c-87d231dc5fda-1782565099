@@ -345,7 +345,9 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          provider: string | null
           recipient_email: string
+          resend_email_id: string | null
           sent_at: string | null
           shipment_id: string | null
           status: string
@@ -356,7 +358,9 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          provider?: string | null
           recipient_email: string
+          resend_email_id?: string | null
           sent_at?: string | null
           shipment_id?: string | null
           status?: string
@@ -367,7 +371,9 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          provider?: string | null
           recipient_email?: string
+          resend_email_id?: string | null
           sent_at?: string | null
           shipment_id?: string | null
           status?: string
@@ -383,6 +389,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      email_settings: {
+        Row: {
+          api_key_encrypted: string | null
+          created_at: string | null
+          from_email: string
+          from_name: string
+          id: string
+          is_active: boolean | null
+          provider: string
+          updated_at: string | null
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          created_at?: string | null
+          from_email?: string
+          from_name?: string
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          updated_at?: string | null
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          created_at?: string | null
+          from_email?: string
+          from_name?: string
+          id?: string
+          is_active?: boolean | null
+          provider?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       email_templates: {
         Row: {

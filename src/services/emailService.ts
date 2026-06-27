@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "./notificationService";
+import { sendEmail, generateEmailTemplate } from "@/lib/resend";
 
 interface SendEmailParams {
   recipientEmail: string;
@@ -166,6 +167,155 @@ export const emailService = {
     } catch (error) {
       console.error('Send shipment status email error:', error);
       return { success: false, error };
+    }
+  },
+
+  /**
+   * Send shipment status change email
+   */
+  sendShipmentStatusEmail: async (shipmentId: string, status: string, customerEmail?: string) => {
+    try {
+      // Get shipment details
+      const { data: shipment } = await supabase
+        .from('shipments')
+        .select(`
+          *,
+          customers (email, full_name),
+          vehicles (make, model, year)
+        `)
+        .eq('id', shipmentId)
+        .single();
+
+      if (!shipment) {
+        return { success: false, error: 'Shipment not found' };
+      }
+
+      const recipientEmail = customerEmail || shipment.customers?.email;
+      if (!recipientEmail) {
+        return { success: false, error: 'No customer email found' };
+      }
+
+      // Get email template
+      const { data: template } = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('template_key', `shipment_${status}`)
+        .maybeSingle();
+
+      if (!template) {
+        return { success: false, error: 'Email template not found' };
+      }
+
+      // Replace template variables
+      const subject = template.subject
+        .replace('{{tracking_number}}', shipment.tracking_number)
+        .replace('{{customer_name}}', shipment.customers?.full_name || 'Customer');
+
+      let bodyText = template.body
+        .replace('{{customer_name}}', shipment.customers?.full_name || 'Customer')
+        .replace('{{tracking_number}}', shipment.tracking_number)
+        .replace('{{pickup_city}}', shipment.pickup_city)
+        .replace('{{delivery_city}}', shipment.delivery_city)
+        .replace('{{status}}', status.replace('_', ' ').toUpperCase());
+
+      if (shipment.estimated_delivery_date) {
+        const eta = new Date(shipment.estimated_delivery_date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        bodyText = bodyText.replace('{{estimated_delivery}}', eta);
+      }
+
+      const trackingUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://gocargologisticsus.com'}/tracking?number=${shipment.tracking_number}`;
+
+      // Generate HTML email
+      const htmlContent = generateEmailTemplate({
+        title: subject,
+        body: bodyText,
+        trackingNumber: shipment.tracking_number,
+        trackingUrl,
+        ctaText: 'Track Shipment',
+        ctaUrl: trackingUrl,
+      });
+
+      // Send email via Resend
+      const emailResult = await sendEmail({
+        to: recipientEmail,
+        subject,
+        html: htmlContent,
+      });
+
+      // Log email attempt
+      await supabase.from('email_logs').insert({
+        recipient_email: recipientEmail,
+        subject,
+        template_key: template.template_key,
+        status: emailResult.success ? 'sent' : 'failed',
+        error_message: emailResult.error,
+        metadata: {
+          shipment_id: shipmentId,
+          tracking_number: shipment.tracking_number,
+          resend_email_id: emailResult.emailId,
+        },
+      });
+
+      // Create notification
+      if (shipment.customer_id) {
+        await notificationService.createNotification({
+          user_id: shipment.customer_id,
+          title: subject,
+          message: bodyText.substring(0, 200),
+          type: 'shipment_update',
+          metadata: {
+            shipment_id: shipmentId,
+            tracking_number: shipment.tracking_number,
+            status,
+          },
+        });
+      }
+
+      return { success: emailResult.success, emailId: emailResult.emailId };
+    } catch (error: any) {
+      console.error('Send shipment status email error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  /**
+   * Retry failed email
+   */
+  retryEmail: async (emailLogId: string) => {
+    try {
+      const { data: emailLog } = await supabase
+        .from('email_logs')
+        .select('*')
+        .eq('id', emailLogId)
+        .single();
+
+      if (!emailLog || !emailLog.metadata?.shipment_id) {
+        return { success: false, error: 'Email log not found' };
+      }
+
+      const { data: shipment } = await supabase
+        .from('shipments')
+        .select('status')
+        .eq('id', emailLog.metadata.shipment_id)
+        .single();
+
+      if (!shipment) {
+        return { success: false, error: 'Shipment not found' };
+      }
+
+      return await emailService.sendShipmentStatusEmail(
+        emailLog.metadata.shipment_id,
+        shipment.status,
+        emailLog.recipient_email
+      );
+    } catch (error: any) {
+      console.error('Retry email error:', error);
+      return { success: false, error: error.message };
     }
   },
 };
