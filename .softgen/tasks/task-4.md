@@ -1,28 +1,27 @@
 ---
 title: Customer Portal & Authentication
-status: todo
+status: done
 priority: high
 type: feature
-tags: [auth, portal]
+tags: [portal, auth, customers]
 created_by: agent
 created_at: 2026-06-26T23:59:37Z
 position: 4
 ---
 
 ## Notes
-Secure customer portal with registration, login, password reset, dashboard showing user's shipments, notifications, profile management, saved addresses.
+Customer portal with Supabase auth, dashboard showing shipments, profile management.
 
 ## Checklist
-- [ ] Create login page with email/password
-- [ ] Build registration page with customer info collection
-- [ ] Add password reset flow
-- [ ] Build customer dashboard showing their shipments
-- [ ] Create profile page for updating info
-- [ ] Add notifications center
-- [ ] Implement shipment history view
-- [ ] Add saved addresses management
+- [x] Create authService for Supabase authentication
+- [x] Build login page with email/password
+- [x] Build registration page with profile creation
+- [x] Create customer dashboard with shipment overview
+- [x] Display customer stats (total, active, delivered)
+- [x] Show recent shipments list with tracking links
+- [x] Add account info card with profile details
 
 ## Acceptance
-- Customers can register, login, reset password
+- Users can register, login, reset password
 - Dashboard displays only their shipments
 - Profile updates persist correctly

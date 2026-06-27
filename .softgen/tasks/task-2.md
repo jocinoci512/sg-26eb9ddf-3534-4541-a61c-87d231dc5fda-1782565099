@@ -1,6 +1,6 @@
 ---
 title: Homepage & Public Navigation
-status: in_progress
+status: done
 priority: urgent
 type: feature
 tags: [homepage, navigation, public]
@@ -20,8 +20,8 @@ Professional homepage with hero section, tracking search, services grid, statist
 - [x] Add "Why Choose Us" section with 4 features
 - [x] Add About Us preview with statistics cards
 - [x] Add final CTA section with gradient background
-- [ ] Generate hero background images with AI
-- [ ] Add smooth scroll animations and transitions
+- [x] Generate hero background images with AI
+- [x] Add smooth scroll animations and transitions
 
 ## Acceptance
 - Homepage displays all sections with proper spacing and hierarchy

@@ -1,29 +1,29 @@
 ---
 title: Shipment Tracking System
-status: todo
+status: in_progress
 priority: high
 type: feature
-tags: [tracking, maps]
+tags: [tracking, maps, shipments]
 created_by: agent
 created_at: 2026-06-26T23:59:37Z
 position: 3
 ---
 
 ## Notes
-World-class tracking page where users enter tracking number and see complete shipment details: timeline, current location, progress bar, vehicle info, documents, live map with route visualization.
+World-class tracking system with live GPS maps, shipment timeline, vehicle info, and document downloads.
 
 ## Checklist
-- [ ] Create tracking page with search input
-- [ ] Build shipment details display component
-- [ ] Add timeline component showing shipment journey
-- [ ] Create interactive map component with pickup/delivery markers
-- [ ] Display vehicle information and photos
-- [ ] Show downloadable documents section
-- [ ] Add progress indicator and ETA calculator
-- [ ] Implement real-time status updates from database
+- [x] Create tracking page with search functionality
+- [x] Display shipment details (status, addresses, dates)
+- [x] Show vehicle information from join
+- [x] Display tracking timeline with status updates
+- [ ] Add interactive GPS map with route visualization
+- [ ] Add document download section (BOL, invoices, etc.)
+- [ ] Add photo gallery for shipment photos
 
 ## Acceptance
-- Users can search by tracking number and see complete shipment data
-- Timeline shows all status updates chronologically
+- Tracking search returns correct shipment by tracking number
+- Shipment details display all address and vehicle info
+- Timeline shows updates chronologically
 - Map displays route with current position marker
 - Documents are downloadable

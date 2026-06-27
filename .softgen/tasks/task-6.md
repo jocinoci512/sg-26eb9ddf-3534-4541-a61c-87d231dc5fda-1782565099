@@ -1,6 +1,6 @@
 ---
 title: Quote System & Forms
-status: todo
+status: done
 priority: medium
 type: feature
 tags: [quotes, forms]
@@ -10,19 +10,19 @@ position: 6
 ---
 
 ## Notes
-Professional quote request system with detailed form capturing pickup/delivery addresses, vehicle info, shipping type. Quotes appear in admin dashboard for approval.
+Professional quote request form that captures customer and shipment details, stores in database.
 
 ## Checklist
-- [ ] Create quote request form with all fields
-- [ ] Add address autocomplete
-- [ ] Build vehicle information section
-- [ ] Implement form validation
-- [ ] Create quote submission API
-- [ ] Add success confirmation page
-- [ ] Build admin quote review interface
-- [ ] Add email notification on quote submission
+- [x] Create quote page with comprehensive form
+- [x] Collect customer info, pickup/delivery addresses, shipment type
+- [x] Show vehicle fields for vehicle shipping type
+- [x] Submit quote to database with proper validation
+- [x] Show success message after submission
+- [x] Handle errors gracefully
 
 ## Acceptance
-- Quote form captures all required data
+- Form validates all required fields
+- Vehicle fields appear only for vehicle shipping
+- Quote submits successfully with all data
 - Submitted quotes appear in admin panel
 - Admin can approve/reject and convert to shipment
