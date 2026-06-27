@@ -13,12 +13,12 @@ position: 1
 Foundation layer: complete database schema for all platform entities (users, shipments, tracking, vehicles, quotes, documents, etc.) + design system setup with Inter fonts and corporate blue palette.
 
 ## Checklist
-- [ ] Create complete Supabase database schema (all tables with proper relationships)
-- [ ] Set up RLS policies for all tables
-- [ ] Configure globals.css with corporate blue design tokens
-- [ ] Import Inter font family (400, 600, 700, 800 weights)
-- [ ] Update tailwind.config.ts with custom colors and fonts
-- [ ] Generate Supabase TypeScript types
+- [x] Create complete Supabase database schema (all tables with proper relationships)
+- [x] Set up RLS policies for all tables
+- [x] Configure globals.css with corporate blue design tokens
+- [x] Import Inter font family (400, 600, 700, 800 weights)
+- [x] Update tailwind.config.ts with custom colors and fonts
+- [x] Generate Supabase TypeScript types
 
 ## Acceptance
 - Database schema supports shipments, tracking, users, quotes, vehicles, documents with proper foreign keys

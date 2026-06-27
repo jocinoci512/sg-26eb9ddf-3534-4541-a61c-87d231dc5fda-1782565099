@@ -2,33 +2,14 @@
 // Types are generated from the Supabase database schema using the Supabase CLI.
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+import type { Database as DB } from './database.types';
 
-export interface Database {
-  public: {
-    Tables: {
-      // Add your tables here
-    }
-    Views: {
-      // Add your views here
-    }
-    Functions: {
-      // Add your functions here
-    }
-    Enums: {
-      // Add your enums here
-    }
-    CompositeTypes: {
-      // Add your composite types here
-    }
-  }
-}
+export type Database = DB;
 
-// Project reference: 8cf0438e-a8f4-4ba8-9121-2999d0bead99
-// Last updated: 2026-06-26T23:59:31.059590+00:00
+// Re-export commonly used types for convenience
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
+export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
+export type Functions<T extends keyof Database['public']['Functions']> = Database['public']['Functions'][T];
+
+// Project reference: rkdoanzzutpeguxgdjax
+// Last updated: 2026-06-27T00:04:37.495952
