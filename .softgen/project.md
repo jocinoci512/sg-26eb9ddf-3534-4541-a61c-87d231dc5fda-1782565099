@@ -26,17 +26,22 @@ Premium dark blue enterprise design with authoritative trust signals.
 ## Features
 ✅ Public website (15+ pages) with premium dark blue design
 ✅ Shipment tracking with comprehensive details and timeline
-✅ **Real-time GPS map with animated route visualization**
+✅ **Enterprise GPS tracking with HERE Maps + Mapbox GL JS**
+✅ **Real-time route visualization with animated vehicle movement**
+✅ **Automatic geocoding and route calculation**
 ✅ **Live position tracking with progress percentage and ETA**
 ✅ **Complete shipment event history (audit trail)**
 ✅ **Real-time notification system with bell icon**
 ✅ **Automated email notifications for status changes**
+✅ **Email system routing all inquiries to support@gocargologisticsus.com**
 ✅ **Printable PDF shipping labels**
 ✅ **Monthly reports & analytics with PDF export**
 ✅ **Global search bar (⌘K) across all entities**
 ✅ **Public blog with SEO optimization**
 ✅ **Email service integration (Resend)**
 ✅ **Email logs dashboard with retry functionality**
+✅ **Traffic analytics tracking (page views, sessions, retention)**
+✅ **Admin analytics dashboard with real-time insights**
 ✅ Customer portal with Supabase authentication
 ✅ Admin dashboard (shipments, quotes, customers, analytics, reports)
 ✅ Quote request system with approval workflow
@@ -56,12 +61,13 @@ Premium dark blue enterprise design with authoritative trust signals.
 - ✅ Professional UI/UX polish
 - ✅ Smooth animations and transitions
 - ✅ Enterprise-grade performance optimization
-- ✅ Real-time shipment tracking with animated GPS map
+- ✅ Enterprise GPS tracking with HERE Maps + Mapbox
 - ✅ Complete audit trail system
 - ✅ Real-time notifications with subscriptions
-- ✅ Email notification automation
+- ✅ Email notification automation to support@gocargologisticsus.com
 - ✅ PDF generation (labels & reports)
 - ✅ Monthly analytics & reporting
 - ✅ Global search functionality
 - ✅ Blog CMS with public frontend
 - ✅ Email delivery monitoring
+- ✅ Traffic analytics and retention tracking
