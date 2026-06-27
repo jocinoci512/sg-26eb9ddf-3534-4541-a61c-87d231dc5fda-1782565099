@@ -4,77 +4,72 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Package, 
-  FileText, 
-  Users, 
-  TrendingUp,
+  DollarSign, 
+  TrendingUp, 
+  Users,
   Clock,
   CheckCircle2,
-  AlertCircle,
-  DollarSign
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+
+type Stats = {
+  totalShipments: number;
+  activeShipments: number;
+  deliveredShipments: number;
+  totalCustomers: number;
+  pendingQuotes: number;
+  delayedShipments: number;
+};
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<Stats>({
     totalShipments: 0,
     activeShipments: 0,
-    pendingQuotes: 0,
+    deliveredShipments: 0,
     totalCustomers: 0,
-    inTransit: 0,
-    delivered: 0,
+    pendingQuotes: 0,
+    delayedShipments: 0,
   });
   const [recentShipments, setRecentShipments] = useState<any[]>([]);
-  const [recentQuotes, setRecentQuotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
-    const { data: shipments } = await supabase
-      .from('shipments')
-      .select('*')
-      .order('created_at', { ascending: false });
+    setLoading(true);
+    setError("");
 
-    const { data: quotes } = await supabase
-      .from('quotes')
-      .select('*')
-      .order('created_at', { ascending: false });
+    try {
+      const [shipmentsRes, customersRes, quotesRes, recentRes] = await Promise.all([
+        supabase.from('shipments').select('id, status', { count: 'exact' }),
+        supabase.from('customers').select('id', { count: 'exact' }),
+        supabase.from('quotes').select('id, status', { count: 'exact' }),
+        supabase.from('shipments').select('*').order('created_at', { ascending: false }).limit(5),
+      ]);
 
-    const { data: customers } = await supabase
-      .from('customers')
-      .select('id');
+      const shipments = shipmentsRes.data ?? [];
+      const activeStatuses = ['pending_pickup', 'picked_up', 'in_transit', 'out_for_delivery'];
+      
+      setStats({
+        totalShipments: shipmentsRes.count ?? 0,
+        activeShipments: shipments.filter(s => activeStatuses.includes(s.status)).length,
+        deliveredShipments: shipments.filter(s => s.status === 'delivered').length,
+        totalCustomers: customersRes.count ?? 0,
+        pendingQuotes: (quotesRes.data ?? []).filter(q => q.status === 'pending').length,
+        delayedShipments: shipments.filter(s => s.status === 'delayed').length,
+      });
 
-    if (shipments) {
-      setStats(prev => ({
-        ...prev,
-        totalShipments: shipments.length,
-        activeShipments: shipments.filter(s => 
-          !['delivered', 'completed', 'cancelled'].includes(s.status)
-        ).length,
-        inTransit: shipments.filter(s => s.status === 'in_transit').length,
-        delivered: shipments.filter(s => 
-          ['delivered', 'completed'].includes(s.status)
-        ).length,
-      }));
-      setRecentShipments(shipments.slice(0, 5));
-    }
-
-    if (quotes) {
-      setStats(prev => ({
-        ...prev,
-        pendingQuotes: quotes.filter(q => q.status === 'pending').length,
-      }));
-      setRecentQuotes(quotes.slice(0, 5));
-    }
-
-    if (customers) {
-      setStats(prev => ({
-        ...prev,
-        totalCustomers: customers.length,
-      }));
+      setRecentShipments(recentRes.data ?? []);
+    } catch (err: any) {
+      console.error('Dashboard error:', err);
+      setError("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,204 +79,156 @@ export default function AdminDashboard() {
     ).join(' ');
   };
 
-  const getStatusColor = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'pending': 'bg-yellow-500',
-      'approved': 'bg-green-500',
-      'rejected': 'bg-red-500',
-      'in_transit': 'bg-blue-500',
-      'delivered': 'bg-green-600',
-    };
-    return statusMap[status] || 'bg-gray-500';
+  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    if (status === 'delivered') return 'default';
+    if (status === 'delayed' || status === 'cancelled') return 'destructive';
+    if (status === 'in_transit') return 'secondary';
+    return 'outline';
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading dashboard...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <p className="text-lg font-semibold mb-2">Error Loading Dashboard</p>
+            <p className="text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  const statCards = [
+    {
+      title: "Total Shipments",
+      value: stats.totalShipments,
+      icon: Package,
+      description: "All time shipments",
+      color: "text-primary",
+    },
+    {
+      title: "Active Shipments",
+      value: stats.activeShipments,
+      icon: Clock,
+      description: "In progress",
+      color: "text-accent",
+    },
+    {
+      title: "Delivered",
+      value: stats.deliveredShipments,
+      icon: CheckCircle2,
+      description: "Successfully completed",
+      color: "text-green-600",
+    },
+    {
+      title: "Total Customers",
+      value: stats.totalCustomers,
+      icon: Users,
+      description: "Registered users",
+      color: "text-secondary",
+    },
+    {
+      title: "Pending Quotes",
+      value: stats.pendingQuotes,
+      icon: TrendingUp,
+      description: "Awaiting review",
+      color: "text-orange-600",
+    },
+    {
+      title: "Delayed",
+      value: stats.delayedShipments,
+      icon: AlertTriangle,
+      description: "Requires attention",
+      color: "text-destructive",
+    },
+  ];
 
   return (
     <AdminLayout>
-      <div className="p-6 md:p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your logistics operations</p>
+      <div className="p-6 md:p-8 space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Dashboard Overview</h1>
+          <p className="text-muted-foreground">
+            Monitor shipments, quotes, and customer activity
+          </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Shipments</p>
-                  <p className="text-3xl font-bold">{stats.totalShipments}</p>
-                </div>
-                <Package className="w-10 h-10 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Active Shipments</p>
-                  <p className="text-3xl font-bold">{stats.activeShipments}</p>
-                </div>
-                <TrendingUp className="w-10 h-10 text-accent" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Pending Quotes</p>
-                  <p className="text-3xl font-bold">{stats.pendingQuotes}</p>
-                </div>
-                <FileText className="w-10 h-10 text-yellow-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Customers</p>
-                  <p className="text-3xl font-bold">{stats.totalCustomers}</p>
-                </div>
-                <Users className="w-10 h-10 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {statCards.map((stat) => {
+            const Icon = stat.icon;
+            return (
+              <Card key={stat.title} className="hover:shadow-lg transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {stat.title}
+                  </CardTitle>
+                  <Icon className={`w-5 h-5 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{stat.value.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">In Transit</p>
-                  <p className="text-2xl font-bold">{stats.inTransit}</p>
-                </div>
-                <Clock className="w-8 h-8 text-blue-500" />
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Shipments</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {recentShipments.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No shipments yet</p>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Delivered</p>
-                  <p className="text-2xl font-bold">{stats.delivered}</p>
-                </div>
-                <CheckCircle2 className="w-8 h-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">On-Time Rate</p>
-                  <p className="text-2xl font-bold">98%</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Revenue (MTD)</p>
-                  <p className="text-2xl font-bold">$45.2K</p>
-                </div>
-                <DollarSign className="w-8 h-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Recent Shipments</CardTitle>
-                <Link href="/admin/shipments">
-                  <Button variant="outline" size="sm">View All</Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {recentShipments.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No shipments yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentShipments.map((shipment) => (
-                    <div key={shipment.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-bold text-sm">{shipment.tracking_number}</p>
-                          <Badge className={`${getStatusColor(shipment.status)} text-white text-xs`}>
-                            {formatStatus(shipment.status)}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {shipment.pickup_city}, {shipment.pickup_state} → {shipment.delivery_city}, {shipment.delivery_state}
-                        </p>
+            ) : (
+              <div className="space-y-4">
+                {recentShipments.map((shipment) => (
+                  <div
+                    key={shipment.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <p className="font-semibold">{shipment.tracking_number}</p>
+                        <Badge variant={getStatusVariant(shipment.status)}>
+                          {formatStatus(shipment.status)}
+                        </Badge>
                       </div>
-                      <Link href={`/admin/shipments/${shipment.id}`}>
-                        <Button variant="ghost" size="sm">View</Button>
-                      </Link>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {shipment.pickup_city}, {shipment.pickup_state} → {shipment.delivery_city}, {shipment.delivery_state}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Recent Quote Requests</CardTitle>
-                <Link href="/admin/quotes">
-                  <Button variant="outline" size="sm">View All</Button>
-                </Link>
+                    <div className="text-right">
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(shipment.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </CardHeader>
-            <CardContent>
-              {recentQuotes.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  No quotes yet
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {recentQuotes.map((quote) => (
-                    <div key={quote.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-bold text-sm">{quote.quote_number}</p>
-                          <Badge className={`${getStatusColor(quote.status)} text-white text-xs`}>
-                            {formatStatus(quote.status)}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {quote.customer_name} • {quote.shipping_type?.replace('_', ' ')}
-                        </p>
-                      </div>
-                      <Link href={`/admin/quotes/${quote.id}`}>
-                        <Button variant="ghost" size="sm">Review</Button>
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );

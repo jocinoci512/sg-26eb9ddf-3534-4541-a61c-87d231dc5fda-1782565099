@@ -1,83 +1,100 @@
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { authService } from "@/services/authService";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Package, 
-  TrendingUp, 
-  Clock, 
-  CheckCircle2,
-  LogOut,
-  User,
-  FileText
-} from "lucide-react";
-import type { Database } from "@/integrations/supabase/types";
+import { Package, Clock, CheckCircle2, User, Mail, Phone, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-
-type Shipment = Database['public']['Tables']['shipments']['Row'];
 
 export default function CustomerDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [customer, setCustomer] = useState<any>(null);
-  const [shipments, setShipments] = useState<Shipment[]>([]);
+  const [shipments, setShipments] = useState<any[]>([]);
+  const [stats, setStats] = useState({ total: 0, active: 0, delivered: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
-    const currentUser = await authService.getCurrentUser();
-    
-    if (!currentUser) {
-      router.push('/login');
-      return;
+    setLoading(true);
+    setError("");
+
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser) {
+        router.push('/login');
+        return;
+      }
+
+      setUser(authUser);
+
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .maybeSingle();
+
+      if (customerError) throw customerError;
+
+      if (!customerData) {
+        const { data: newCustomer, error: createError } = await supabase
+          .from('customers')
+          .insert([
+            {
+              user_id: authUser.id,
+              email: authUser.email!,
+              full_name: authUser.user_metadata?.full_name || authUser.email!.split('@')[0],
+            }
+          ])
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        setCustomer(newCustomer);
+        await loadShipments(newCustomer.id);
+      } else {
+        setCustomer(customerData);
+        await loadShipments(customerData.id);
+      }
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setError("Failed to load account information");
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setUser(currentUser);
-
-    const { data: customerData } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .single();
-
-    if (customerData) {
-      setCustomer(customerData);
-
-      const { data: shipmentsData } = await supabase
+  const loadShipments = async (customerId: string) => {
+    try {
+      const { data: shipmentsData, error: shipmentsError } = await supabase
         .from('shipments')
         .select('*')
-        .eq('customer_id', customerData.id)
-        .order('created_at', { ascending: false });
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-      if (shipmentsData) {
-        setShipments(shipmentsData);
-      }
+      if (shipmentsError) throw shipmentsError;
+
+      const shipmentsList = shipmentsData ?? [];
+      setShipments(shipmentsList);
+
+      const activeStatuses = ['pending_pickup', 'picked_up', 'in_transit', 'out_for_delivery'];
+      setStats({
+        total: shipmentsList.length,
+        active: shipmentsList.filter(s => activeStatuses.includes(s.status)).length,
+        delivered: shipmentsList.filter(s => s.status === 'delivered').length,
+      });
+    } catch (err: any) {
+      console.error('Shipments error:', err);
     }
-
-    setLoading(false);
-  };
-
-  const handleSignOut = async () => {
-    await authService.signOut();
-    router.push('/');
-  };
-
-  const getStatusColor = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'in_transit': 'bg-blue-500',
-      'delivered': 'bg-green-500',
-      'pending_pickup': 'bg-yellow-500',
-      'on_hold': 'bg-gray-500',
-    };
-    return statusMap[status] || 'bg-blue-500';
   };
 
   const formatStatus = (status: string) => {
@@ -86,195 +103,176 @@ export default function CustomerDashboard() {
     ).join(' ');
   };
 
+  const getStatusVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
+    if (status === 'delivered') return 'default';
+    if (status === 'delayed' || status === 'cancelled') return 'destructive';
+    if (status === 'in_transit') return 'secondary';
+    return 'outline';
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading dashboard...</p>
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading your dashboard...</p>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
-  const activeShipments = shipments.filter(s => 
-    !['delivered', 'completed', 'cancelled'].includes(s.status)
-  );
-  const deliveredShipments = shipments.filter(s => 
-    ['delivered', 'completed'].includes(s.status)
-  );
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Navigation />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+            <p className="text-lg font-semibold mb-2">Error Loading Dashboard</p>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => router.push('/login')}>Back to Login</Button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
 
-      <section className="bg-gradient-to-br from-primary to-accent text-white py-12">
-        <div className="container">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Welcome, {customer?.full_name || 'Customer'}</h1>
-              <p className="text-white/80">Manage your shipments and account</p>
-            </div>
-            <Button onClick={handleSignOut} variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign Out
-            </Button>
+      <section className="flex-1 py-12 bg-muted/30">
+        <div className="container space-y-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Welcome back, {customer?.full_name}</h1>
+            <p className="text-muted-foreground">
+              Manage your shipments and track deliveries
+            </p>
           </div>
-        </div>
-      </section>
 
-      <section className="py-12 bg-muted/30">
-        <div className="container">
-          <div className="grid md:grid-cols-4 gap-6 mb-12">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Total Shipments</p>
-                    <p className="text-3xl font-bold">{shipments.length}</p>
-                  </div>
-                  <Package className="w-10 h-10 text-primary" />
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Shipments
+                </CardTitle>
+                <Package className="w-5 h-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stats.total}</div>
+                <p className="text-xs text-muted-foreground mt-1">All time</p>
               </CardContent>
             </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Active</p>
-                    <p className="text-3xl font-bold">{activeShipments.length}</p>
-                  </div>
-                  <TrendingUp className="w-10 h-10 text-accent" />
-                </div>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Active
+                </CardTitle>
+                <Clock className="w-5 h-5 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stats.active}</div>
+                <p className="text-xs text-muted-foreground mt-1">In progress</p>
               </CardContent>
             </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">In Transit</p>
-                    <p className="text-3xl font-bold">
-                      {shipments.filter(s => s.status === 'in_transit').length}
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Delivered
+                </CardTitle>
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stats.delivered}</div>
+                <p className="text-xs text-muted-foreground mt-1">Completed</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle>Recent Shipments</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {shipments.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-lg font-semibold mb-2">No Shipments Yet</p>
+                    <p className="text-muted-foreground mb-4">
+                      Request a quote to get started
                     </p>
+                    <Button asChild className="btn-gradient text-white">
+                      <Link href="/quote">Get a Quote</Link>
+                    </Button>
                   </div>
-                  <Clock className="w-10 h-10 text-blue-500" />
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Delivered</p>
-                    <p className="text-3xl font-bold">{deliveredShipments.length}</p>
-                  </div>
-                  <CheckCircle2 className="w-10 h-10 text-green-500" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Shipments</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {shipments.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground mb-4">No shipments yet</p>
-                      <Link href="/quote">
-                        <Button>Request a Quote</Button>
-                      </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {shipments.slice(0, 5).map((shipment) => (
-                        <div key={shipment.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-bold">{shipment.tracking_number}</h3>
-                              <Badge className={`${getStatusColor(shipment.status)} text-white`}>
-                                {formatStatus(shipment.status)}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {shipment.pickup_city}, {shipment.pickup_state} → {shipment.delivery_city}, {shipment.delivery_state}
-                            </p>
+                ) : (
+                  <div className="space-y-4">
+                    {shipments.map((shipment) => (
+                      <div
+                        key={shipment.id}
+                        className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-1">
+                            <p className="font-semibold">{shipment.tracking_number}</p>
+                            <Badge variant={getStatusVariant(shipment.status)}>
+                              {formatStatus(shipment.status)}
+                            </Badge>
                           </div>
-                          <Link href={`/tracking?number=${shipment.tracking_number}`}>
-                            <Button variant="outline" size="sm">
-                              Track
-                            </Button>
-                          </Link>
+                          <p className="text-sm text-muted-foreground">
+                            {shipment.pickup_city}, {shipment.pickup_state} → {shipment.delivery_city}, {shipment.delivery_state}
+                          </p>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/tracking?number=${shipment.tracking_number}`}>
+                            Track
+                          </Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    Account Info
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+            <Card>
+              <CardHeader>
+                <CardTitle>Account Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <User className="w-5 h-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Name</p>
                     <p className="font-medium">{customer?.full_name}</p>
                   </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Mail className="w-5 h-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
                     <p className="font-medium">{customer?.email}</p>
                   </div>
-                  {customer?.phone && (
+                </div>
+                {customer?.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-5 h-5 text-muted-foreground" />
                     <div>
                       <p className="text-sm text-muted-foreground">Phone</p>
                       <p className="font-medium">{customer.phone}</p>
                     </div>
-                  )}
-                  <Button variant="outline" className="w-full mt-4">
-                    Edit Profile
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Quick Actions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <Link href="/quote" className="block">
-                    <Button variant="outline" className="w-full justify-start">
-                      Request New Quote
-                    </Button>
-                  </Link>
-                  <Link href="/tracking" className="block">
-                    <Button variant="outline" className="w-full justify-start">
-                      Track Shipment
-                    </Button>
-                  </Link>
-                  <Link href="/contact" className="block">
-                    <Button variant="outline" className="w-full justify-start">
-                      Contact Support
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

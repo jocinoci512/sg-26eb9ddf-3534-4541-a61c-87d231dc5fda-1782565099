@@ -94,16 +94,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
       <div className="flex">
         <aside className={`
-          fixed md:sticky top-0 left-0 h-screen bg-white border-r w-64 z-40
+          fixed md:sticky top-0 left-0 h-screen admin-sidebar w-64 z-40
           transition-transform duration-300
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}>
-          <div className="p-6 border-b">
-            <h1 className="text-xl font-bold text-primary">Go Cargo Admin</h1>
-            <p className="text-sm text-muted-foreground mt-1">
+          <div className="p-6 border-b border-white/10">
+            <h1 className="text-xl font-bold text-white">Go Cargo Admin</h1>
+            <p className="text-sm text-white/80 mt-1">
               {staff?.full_name}
             </p>
-            <p className="text-xs text-muted-foreground capitalize">
+            <p className="text-xs text-white/60 capitalize">
               {staff?.role?.replace('_', ' ')}
             </p>
           </div>
@@ -116,10 +116,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <Link key={item.name} href={item.href}>
                   <div
                     className={`
-                      flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
+                      flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
                       ${isActive 
-                        ? 'bg-primary text-white' 
-                        : 'text-muted-foreground hover:bg-muted'
+                        ? 'bg-white/20 text-white shadow-lg' 
+                        : 'text-white/70 hover:bg-white/10 hover:text-white'
                       }
                     `}
                   >
@@ -131,10 +131,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             })}
           </nav>
 
-          <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10">
             <Button
               variant="ghost"
-              className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="w-full justify-start text-white/80 hover:text-white hover:bg-white/10"
               onClick={handleSignOut}
             >
               <LogOut className="w-5 h-5 mr-3" />
