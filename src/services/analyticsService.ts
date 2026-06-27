@@ -145,7 +145,7 @@ export const analyticsService = {
         .from('user_sessions')
         .select('pages_visited')
         .eq('session_id', data.sessionId)
-        .single();
+        .maybeSingle();
 
       if (session) {
         await supabase
@@ -167,6 +167,18 @@ export const analyticsService = {
    */
   async startSession(data: SessionData) {
     try {
+      // Check if session already exists
+      const { data: existingSession } = await supabase
+        .from('user_sessions')
+        .select('id')
+        .eq('session_id', data.sessionId)
+        .maybeSingle();
+
+      // If session already exists, don't create a new one
+      if (existingSession) {
+        return;
+      }
+
       const deviceType = detectDeviceType();
       const browser = detectBrowser();
       const os = detectOS();
@@ -203,7 +215,7 @@ export const analyticsService = {
         .from('user_sessions')
         .select('started_at')
         .eq('session_id', sessionId)
-        .single();
+        .maybeSingle();
 
       if (session) {
         const startedAt = new Date(session.started_at);
