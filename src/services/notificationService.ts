@@ -14,11 +14,10 @@ export type NotificationType =
 
 interface CreateNotificationParams {
   userId: string;
-  customerId?: string;
-  shipmentId?: string;
-  type: NotificationType;
   title: string;
   message: string;
+  type: 'shipment_created' | 'shipment_updated' | 'quote_received' | 'system_alert';
+  metadata?: Record<string, any>;
 }
 
 export const notificationService = {

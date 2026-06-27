@@ -345,9 +345,11 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          metadata: Json | null
           provider: string | null
           recipient_email: string
           resend_email_id: string | null
+          retry_count: number | null
           sent_at: string | null
           shipment_id: string | null
           status: string
@@ -358,9 +360,11 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          metadata?: Json | null
           provider?: string | null
           recipient_email: string
           resend_email_id?: string | null
+          retry_count?: number | null
           sent_at?: string | null
           shipment_id?: string | null
           status?: string
@@ -371,9 +375,11 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          metadata?: Json | null
           provider?: string | null
           recipient_email?: string
           resend_email_id?: string | null
+          retry_count?: number | null
           sent_at?: string | null
           shipment_id?: string | null
           status?: string
