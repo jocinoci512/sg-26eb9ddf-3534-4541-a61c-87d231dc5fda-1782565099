@@ -1,8 +1,11 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -20,15 +23,8 @@ import {
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, FileText, CheckCircle, XCircle, Eye } from "lucide-react";
+import { Search, FileText, CheckCircle, XCircle, Package, Loader2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 export default function QuotesManagementPage() {
   const { toast } = useToast();
@@ -37,6 +33,9 @@ export default function QuotesManagementPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedQuote, setSelectedQuote] = useState<any>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
     loadQuotes();
@@ -64,66 +63,197 @@ export default function QuotesManagementPage() {
     }
   };
 
-  const handleStatusUpdate = async (quoteId: string, newStatus: 'approved' | 'rejected') => {
+  const handleApprove = async (quoteId: string) => {
+    setActionLoading(quoteId);
     try {
       const { error } = await supabase
         .from('quotes')
-        .update({ status: newStatus })
+        .update({ status: 'approved' })
         .eq('id', quoteId);
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: `Quote ${newStatus} successfully`,
+        description: "Quote approved successfully",
       });
       loadQuotes();
-      setSelectedQuote(null);
     } catch (error) {
-      console.error('Update error:', error);
+      console.error('Approve error:', error);
       toast({
         title: "Error",
-        description: "Failed to update quote status",
+        description: "Failed to approve quote",
         variant: "destructive",
       });
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  const formatStatus = (status: string) => {
-    return status.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+  const handleReject = async (quoteId: string) => {
+    setActionLoading(quoteId);
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .update({ status: 'rejected' })
+        .eq('id', quoteId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Quote rejected",
+      });
+      loadQuotes();
+    } catch (error) {
+      console.error('Reject error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject quote",
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
-  const getStatusColor = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'pending': 'bg-yellow-500',
-      'approved': 'bg-green-500',
-      'rejected': 'bg-red-500',
-      'converted': 'bg-blue-500',
+  const handleConvertToShipment = async () => {
+    if (!selectedQuote) return;
+    
+    setConverting(true);
+    try {
+      // First, get or create customer
+      let customerId = null;
+      const { data: existingCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('email', selectedQuote.customer_email)
+        .maybeSingle();
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert([{
+            email: selectedQuote.customer_email,
+            full_name: selectedQuote.customer_name,
+            phone: selectedQuote.customer_phone,
+          }])
+          .select()
+          .single();
+
+        if (customerError) throw customerError;
+        customerId = newCustomer.id;
+      }
+
+      // Create vehicle if applicable
+      let vehicleId = null;
+      if (selectedQuote.shipping_type === 'vehicle_transport' && selectedQuote.vehicle_make) {
+        const { data: vehicle, error: vehicleError } = await supabase
+          .from('vehicles')
+          .insert([{
+            make: selectedQuote.vehicle_make,
+            model: selectedQuote.vehicle_model || '',
+            year: selectedQuote.vehicle_year || new Date().getFullYear(),
+          }])
+          .select()
+          .single();
+
+        if (vehicleError) throw vehicleError;
+        vehicleId = vehicle.id;
+      }
+
+      // Create shipment
+      const { error: shipmentError } = await supabase
+        .from('shipments')
+        .insert([{
+          customer_id: customerId,
+          vehicle_id: vehicleId,
+          pickup_address_line1: selectedQuote.pickup_address,
+          pickup_city: selectedQuote.pickup_city || '',
+          pickup_state: selectedQuote.pickup_state || '',
+          pickup_zip_code: selectedQuote.pickup_zip || '',
+          delivery_address_line1: selectedQuote.delivery_address,
+          delivery_city: selectedQuote.delivery_city || '',
+          delivery_state: selectedQuote.delivery_state || '',
+          delivery_zip_code: selectedQuote.delivery_zip || '',
+          shipment_type: selectedQuote.shipping_type,
+          status: 'booked',
+          estimated_delivery_date: selectedQuote.preferred_pickup_date,
+        }]);
+
+      if (shipmentError) throw shipmentError;
+
+      // Update quote status
+      const { error: updateError } = await supabase
+        .from('quotes')
+        .update({ status: 'converted' })
+        .eq('id', selectedQuote.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Success",
+        description: "Quote converted to shipment successfully",
+      });
+      
+      setDialogOpen(false);
+      setSelectedQuote(null);
+      loadQuotes();
+    } catch (error: any) {
+      console.error('Convert error:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to convert quote to shipment",
+        variant: "destructive",
+      });
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
+      'pending': { variant: 'outline', label: 'Pending' },
+      'approved': { variant: 'default', label: 'Approved' },
+      'rejected': { variant: 'destructive', label: 'Rejected' },
+      'converted': { variant: 'secondary', label: 'Converted' },
     };
-    return statusMap[status] || 'bg-gray-500';
+    const config = variants[status] || variants['pending'];
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
   const filteredQuotes = quotes.filter(quote => {
     const matchesSearch = 
-      quote.quote_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       quote.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.customer_email?.toLowerCase().includes(searchTerm.toLowerCase());
+      quote.customer_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      quote.quote_number?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || quote.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
 
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading quotes...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout>
       <div className="p-6 md:p-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-2">Quote Requests</h1>
-            <p className="text-muted-foreground">Review and manage customer quote requests</p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Quote Requests</h1>
+          <p className="text-muted-foreground">Review and manage customer quote requests</p>
         </div>
 
         <Card>
@@ -132,7 +262,7 @@ export default function QuotesManagementPage() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by quote number, customer name, email..."
+                  placeholder="Search by customer, email, quote number..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
@@ -147,20 +277,19 @@ export default function QuotesManagementPage() {
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="approved">Approved</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="converted">Converted</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Loading quotes...</p>
-              </div>
-            ) : filteredQuotes.length === 0 ? (
+            {filteredQuotes.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No quotes found</p>
+                <p className="text-lg font-semibold mb-2">No Quotes Found</p>
+                <p className="text-muted-foreground">
+                  {quotes.length === 0 ? "No quote requests yet" : "No quotes match your filters"}
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -183,16 +312,15 @@ export default function QuotesManagementPage() {
                           {quote.quote_number}
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
+                          <div>
                             <div className="font-medium">{quote.customer_name}</div>
-                            <div className="text-muted-foreground text-xs">{quote.customer_email}</div>
+                            <div className="text-sm text-muted-foreground">{quote.customer_email}</div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            <div className="text-muted-foreground text-xs">
-                              {quote.pickup_address} → {quote.delivery_address}
-                            </div>
+                            <div>{quote.pickup_address}</div>
+                            <div className="text-muted-foreground text-xs">→ {quote.delivery_address}</div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -201,41 +329,108 @@ export default function QuotesManagementPage() {
                           </span>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${getStatusColor(quote.status)} text-white`}>
-                            {formatStatus(quote.status)}
-                          </Badge>
+                          {getStatusBadge(quote.status)}
                         </TableCell>
                         <TableCell>
                           {new Date(quote.created_at).toLocaleDateString()}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell>
                           <div className="flex items-center justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => setSelectedQuote(quote)}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
                             {quote.status === 'pending' && (
                               <>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
                                   size="sm"
-                                  onClick={() => handleStatusUpdate(quote.id, 'approved')}
-                                  className="text-green-600 hover:text-green-700"
+                                  variant="outline"
+                                  onClick={() => handleApprove(quote.id)}
+                                  disabled={actionLoading === quote.id}
+                                  className="text-green-600 hover:text-green-700 hover:border-green-600"
                                 >
-                                  <CheckCircle className="w-4 h-4" />
+                                  {actionLoading === quote.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="w-4 h-4" />
+                                  )}
                                 </Button>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
                                   size="sm"
-                                  onClick={() => handleStatusUpdate(quote.id, 'rejected')}
-                                  className="text-red-600 hover:text-red-700"
+                                  variant="outline"
+                                  onClick={() => handleReject(quote.id)}
+                                  disabled={actionLoading === quote.id}
+                                  className="text-red-600 hover:text-red-700 hover:border-red-600"
                                 >
                                   <XCircle className="w-4 h-4" />
                                 </Button>
                               </>
+                            )}
+                            {quote.status === 'approved' && (
+                              <Dialog open={dialogOpen && selectedQuote?.id === quote.id} onOpenChange={(open) => {
+                                setDialogOpen(open);
+                                if (!open) setSelectedQuote(null);
+                              }}>
+                                <DialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    className="btn-gradient text-white"
+                                    onClick={() => setSelectedQuote(quote)}
+                                  >
+                                    <Package className="w-4 h-4 mr-1" />
+                                    Convert
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Convert Quote to Shipment</DialogTitle>
+                                  </DialogHeader>
+                                  <div className="space-y-4">
+                                    <div className="bg-muted p-4 rounded-lg space-y-2">
+                                      <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Quote #</span>
+                                        <span className="font-mono font-medium">{quote.quote_number}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Customer</span>
+                                        <span className="font-medium">{quote.customer_name}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-sm text-muted-foreground">Type</span>
+                                        <span className="capitalize">{quote.shipping_type?.replace('_', ' ')}</span>
+                                      </div>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">
+                                      This will create a new shipment with status "Booked" and mark the quote as converted.
+                                    </p>
+                                    <div className="flex gap-3">
+                                      <Button
+                                        onClick={handleConvertToShipment}
+                                        disabled={converting}
+                                        className="flex-1 btn-gradient text-white"
+                                      >
+                                        {converting ? (
+                                          <>
+                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                            Converting...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Package className="w-4 h-4 mr-2" />
+                                            Confirm Conversion
+                                          </>
+                                        )}
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                          setDialogOpen(false);
+                                          setSelectedQuote(null);
+                                        }}
+                                        disabled={converting}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
                             )}
                           </div>
                         </TableCell>
@@ -248,119 +443,6 @@ export default function QuotesManagementPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={!!selectedQuote} onOpenChange={() => setSelectedQuote(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Quote Details</DialogTitle>
-            <DialogDescription>
-              Quote #{selectedQuote?.quote_number}
-            </DialogDescription>
-          </DialogHeader>
-          {selectedQuote && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-bold mb-3">Customer Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Name</p>
-                    <p className="font-medium">{selectedQuote.customer_name}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Email</p>
-                    <p className="font-medium">{selectedQuote.customer_email}</p>
-                  </div>
-                  {selectedQuote.customer_phone && (
-                    <div>
-                      <p className="text-muted-foreground">Phone</p>
-                      <p className="font-medium">{selectedQuote.customer_phone}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="font-bold mb-3">Shipment Details</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Pickup Location</p>
-                    <p className="font-medium">{selectedQuote.pickup_address}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Delivery Location</p>
-                    <p className="font-medium">{selectedQuote.delivery_address}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Shipping Type</p>
-                    <p className="font-medium capitalize">{selectedQuote.shipping_type?.replace('_', ' ')}</p>
-                  </div>
-                  {selectedQuote.preferred_pickup_date && (
-                    <div>
-                      <p className="text-muted-foreground">Preferred Pickup</p>
-                      <p className="font-medium">
-                        {new Date(selectedQuote.preferred_pickup_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {(selectedQuote.vehicle_make || selectedQuote.vehicle_model) && (
-                <div>
-                  <h3 className="font-bold mb-3">Vehicle Information</h3>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    {selectedQuote.vehicle_year && (
-                      <div>
-                        <p className="text-muted-foreground">Year</p>
-                        <p className="font-medium">{selectedQuote.vehicle_year}</p>
-                      </div>
-                    )}
-                    {selectedQuote.vehicle_make && (
-                      <div>
-                        <p className="text-muted-foreground">Make</p>
-                        <p className="font-medium">{selectedQuote.vehicle_make}</p>
-                      </div>
-                    )}
-                    {selectedQuote.vehicle_model && (
-                      <div>
-                        <p className="text-muted-foreground">Model</p>
-                        <p className="font-medium">{selectedQuote.vehicle_model}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {selectedQuote.notes && (
-                <div>
-                  <h3 className="font-bold mb-2">Additional Notes</h3>
-                  <p className="text-sm text-muted-foreground">{selectedQuote.notes}</p>
-                </div>
-              )}
-
-              {selectedQuote.status === 'pending' && (
-                <div className="flex gap-3 pt-4">
-                  <Button 
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => handleStatusUpdate(selectedQuote.id, 'approved')}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Approve Quote
-                  </Button>
-                  <Button 
-                    variant="destructive"
-                    className="flex-1"
-                    onClick={() => handleStatusUpdate(selectedQuote.id, 'rejected')}
-                  >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Reject Quote
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 }

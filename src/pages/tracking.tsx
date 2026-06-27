@@ -16,7 +16,9 @@ import {
   CheckCircle2,
   Clock,
   FileText,
-  Download
+  Download,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -100,75 +102,75 @@ export default function TrackingPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSearch();
-  };
-
-  const getStatusColor = (status: string) => {
-    const statusMap: Record<string, string> = {
-      'booked': 'bg-blue-500',
-      'pending_pickup': 'bg-yellow-500',
-      'picked_up': 'bg-orange-500',
-      'processing': 'bg-purple-500',
-      'loaded': 'bg-indigo-500',
-      'in_transit': 'bg-blue-600',
-      'distribution_center': 'bg-cyan-500',
-      'customs_clearance': 'bg-amber-500',
-      'out_for_delivery': 'bg-green-500',
-      'delivered': 'bg-green-600',
-      'completed': 'bg-emerald-600',
-      'delayed': 'bg-red-500',
-      'on_hold': 'bg-gray-500',
-      'cancelled': 'bg-gray-600',
-    };
-    return statusMap[status] || 'bg-gray-500';
-  };
-
   const formatStatus = (status: string) => {
     return status.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
 
+  const getStatusIcon = (status: string) => {
+    if (status === 'delivered') return CheckCircle2;
+    if (status.includes('transit') || status.includes('delivery')) return Truck;
+    return Clock;
+  };
+
+  const getStatusColor = (status: string) => {
+    if (status === 'delivered') return 'text-green-600';
+    if (status === 'delayed' || status === 'cancelled') return 'text-red-600';
+    if (status.includes('transit')) return 'text-blue-600';
+    return 'text-orange-600';
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Navigation />
 
-      <section className="hero-gradient text-white py-16">
+      <section className="py-16 hero-gradient text-white">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                <Package className="w-8 h-8" />
+              </div>
+            </div>
             <h1 className="text-4xl md:text-5xl font-bold mb-4">Track Your Shipment</h1>
-            <p className="text-xl text-white/90 mb-8">
-              Enter your tracking number to see real-time shipment status
+            <p className="text-lg text-white/90 mb-8">
+              Enter your tracking number to get real-time shipment updates
             </p>
 
-            <form onSubmit={handleSubmit}>
-              <div className="flex gap-2 bg-white rounded-lg p-2">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Enter tracking number (e.g., GCL123456789)"
-                    value={trackingNumber}
-                    onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
-                    className="pl-10 border-0 focus-visible:ring-0 h-12 text-foreground"
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  size="lg" 
-                  className="bg-primary hover:bg-primary/90 text-white"
-                  disabled={loading}
-                >
-                  {loading ? "Searching..." : "Track"}
-                </Button>
-              </div>
-            </form>
+            <div className="flex gap-3">
+              <Input
+                placeholder="Enter tracking number (e.g., GCL-2026-XXXX)"
+                value={trackingNumber}
+                onChange={(e) => setTrackingNumber(e.target.value.toUpperCase())}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                className="flex-1 h-12 bg-white text-foreground placeholder:text-muted-foreground"
+                disabled={loading}
+              />
+              <Button
+                onClick={() => handleSearch()}
+                disabled={loading}
+                size="lg"
+                className="bg-white text-primary hover:bg-white/90 px-8"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5 mr-2" />
+                    Track
+                  </>
+                )}
+              </Button>
+            </div>
 
             {error && (
-              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/50 rounded-lg">
-                <p className="text-white">{error}</p>
+              <div className="mt-4 p-4 bg-red-500/20 border border-red-500/30 rounded-lg flex items-center gap-3 text-left backdrop-blur-sm">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm">{error}</p>
               </div>
             )}
           </div>
@@ -177,44 +179,64 @@ export default function TrackingPage() {
 
       {shipment && (
         <section className="py-12 bg-muted/30">
-          <div className="container max-w-5xl">
-            <Card className="mb-8">
-              <CardHeader>
-                <div className="flex items-start justify-between">
+          <div className="container max-w-6xl space-y-8 animate-fade-up">
+            <Card>
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-2xl mb-2">Tracking: {shipment.tracking_number}</CardTitle>
-                    <Badge className={`${getStatusColor(shipment.status)} text-white`}>
-                      {formatStatus(shipment.status)}
-                    </Badge>
+                    <CardTitle className="text-2xl mb-2">Tracking Details</CardTitle>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-lg font-bold text-primary">
+                        {shipment.tracking_number}
+                      </span>
+                      <Badge className={`${getStatusColor(shipment.status)} bg-transparent border-current`}>
+                        {formatStatus(shipment.status)}
+                      </Badge>
+                    </div>
                   </div>
-                  <Package className="w-12 h-12 text-primary" />
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Documents
+                    </Button>
+                    <Button variant="outline" size="sm">
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="font-bold text-sm text-muted-foreground mb-1">Pickup Location</h3>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
-                        <p className="text-foreground">
-                          {shipment.pickup_address_line1}
-                          {shipment.pickup_address_line2 && `, ${shipment.pickup_address_line2}`}
-                          <br />
-                          {shipment.pickup_city}, {shipment.pickup_state} {shipment.pickup_zip_code}
-                        </p>
+                      <h3 className="font-bold text-sm text-muted-foreground mb-2">Pickup Location</h3>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">
+                            {shipment.pickup_address_line1}
+                            {shipment.pickup_address_line2 && `, ${shipment.pickup_address_line2}`}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {shipment.pickup_city}, {shipment.pickup_state} {shipment.pickup_zip_code}
+                          </p>
+                        </div>
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm text-muted-foreground mb-1">Delivery Location</h3>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-accent mt-1 flex-shrink-0" />
-                        <p className="text-foreground">
-                          {shipment.delivery_address_line1}
-                          {shipment.delivery_address_line2 && `, ${shipment.delivery_address_line2}`}
-                          <br />
-                          {shipment.delivery_city}, {shipment.delivery_state} {shipment.delivery_zip_code}
-                        </p>
+                      <h3 className="font-bold text-sm text-muted-foreground mb-2">Delivery Location</h3>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">
+                            {shipment.delivery_address_line1}
+                            {shipment.delivery_address_line2 && `, ${shipment.delivery_address_line2}`}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {shipment.delivery_city}, {shipment.delivery_state} {shipment.delivery_zip_code}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -222,10 +244,10 @@ export default function TrackingPage() {
                   <div className="space-y-4">
                     {shipment.estimated_delivery_date && (
                       <div>
-                        <h3 className="font-bold text-sm text-muted-foreground mb-1">Estimated Delivery</h3>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-primary" />
-                          <p className="text-foreground">
+                        <h3 className="font-bold text-sm text-muted-foreground mb-2">Estimated Delivery</h3>
+                        <div className="flex items-center gap-3">
+                          <Calendar className="w-5 h-5 text-primary" />
+                          <p className="font-medium">
                             {new Date(shipment.estimated_delivery_date).toLocaleDateString('en-US', {
                               weekday: 'long',
                               year: 'numeric',
@@ -237,10 +259,10 @@ export default function TrackingPage() {
                       </div>
                     )}
                     <div>
-                      <h3 className="font-bold text-sm text-muted-foreground mb-1">Shipment Type</h3>
-                      <div className="flex items-center gap-2">
-                        <Truck className="w-4 h-4 text-accent" />
-                        <p className="text-foreground capitalize">{shipment.shipment_type?.replace('_', ' ')}</p>
+                      <h3 className="font-bold text-sm text-muted-foreground mb-2">Shipment Type</h3>
+                      <div className="flex items-center gap-3">
+                        <Truck className="w-5 h-5 text-accent" />
+                        <p className="font-medium capitalize">{shipment.shipment_type?.replace('_', ' ')}</p>
                       </div>
                     </div>
                   </div>
@@ -250,24 +272,24 @@ export default function TrackingPage() {
                   <>
                     <Separator className="my-6" />
                     <div>
-                      <h3 className="font-bold mb-3">Vehicle Information</h3>
+                      <h3 className="font-bold text-lg mb-4">Vehicle Information</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Make</p>
-                          <p className="font-medium">{shipment.vehicles.make}</p>
+                        <div className="p-3 bg-muted rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1">Make</p>
+                          <p className="font-semibold">{shipment.vehicles.make}</p>
                         </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Model</p>
-                          <p className="font-medium">{shipment.vehicles.model}</p>
+                        <div className="p-3 bg-muted rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1">Model</p>
+                          <p className="font-semibold">{shipment.vehicles.model}</p>
                         </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Year</p>
-                          <p className="font-medium">{shipment.vehicles.year}</p>
+                        <div className="p-3 bg-muted rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1">Year</p>
+                          <p className="font-semibold">{shipment.vehicles.year}</p>
                         </div>
                         {shipment.vehicles.color && (
-                          <div>
-                            <p className="text-sm text-muted-foreground">Color</p>
-                            <p className="font-medium">{shipment.vehicles.color}</p>
+                          <div className="p-3 bg-muted rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-1">Color</p>
+                            <p className="font-semibold">{shipment.vehicles.color}</p>
                           </div>
                         )}
                       </div>
@@ -277,99 +299,63 @@ export default function TrackingPage() {
               </CardContent>
             </Card>
 
-            {trackingUpdates.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tracking History</CardTitle>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>Shipment Timeline</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {trackingUpdates.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">No tracking updates yet</p>
+                  </div>
+                ) : (
                   <div className="space-y-4">
-                    {trackingUpdates.map((update, index) => (
-                      <div key={update.id} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            index === 0 ? 'bg-primary' : 'bg-muted'
-                          }`}>
-                            {index === 0 ? (
-                              <CheckCircle2 className="w-5 h-5 text-white" />
-                            ) : (
-                              <Clock className="w-5 h-5 text-muted-foreground" />
+                    {trackingUpdates.map((update, index) => {
+                      const StatusIcon = getStatusIcon(update.status);
+                      return (
+                        <div key={update.id} className="flex gap-4">
+                          <div className="flex flex-col items-center">
+                            <div className={`
+                              w-10 h-10 rounded-full flex items-center justify-center
+                              ${index === 0 ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'}
+                            `}>
+                              <StatusIcon className="w-5 h-5" />
+                            </div>
+                            {index < trackingUpdates.length - 1 && (
+                              <div className="w-0.5 h-full min-h-8 bg-border mt-2" />
                             )}
                           </div>
-                          {index < trackingUpdates.length - 1 && (
-                            <div className="w-0.5 h-full bg-border mt-2"></div>
-                          )}
-                        </div>
-                        <div className="flex-1 pb-6">
-                          <div className="flex items-start justify-between mb-1">
-                            <h4 className="font-bold">{formatStatus(update.status)}</h4>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(update.created_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </span>
+                          <div className="flex-1 pb-4">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-1">
+                              <h4 className="font-bold">{formatStatus(update.status)}</h4>
+                              <span className="text-sm text-muted-foreground">
+                                {new Date(update.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                            {update.location && (
+                              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                                <MapPin className="w-4 h-4" />
+                                {update.location}
+                              </p>
+                            )}
+                            {update.notes && (
+                              <p className="text-sm mt-2">{update.notes}</p>
+                            )}
                           </div>
-                          {update.location && (
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {update.location}
-                            </p>
-                          )}
-                          {update.notes && (
-                            <p className="text-sm mt-1">{update.notes}</p>
-                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </section>
-      )}
-
-      {!shipment && !loading && !error && (
-        <section className="py-20 bg-white">
-          <div className="container max-w-3xl text-center">
-            <Package className="w-20 h-20 text-muted-foreground mx-auto mb-6" />
-            <h2 className="text-2xl font-bold mb-4">Track Your Shipment</h2>
-            <p className="text-muted-foreground mb-8">
-              Enter your tracking number above to see real-time updates on your shipment's journey.
-            </p>
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card>
-                <CardContent className="pt-6">
-                  <Search className="w-10 h-10 text-primary mx-auto mb-3" />
-                  <h3 className="font-bold mb-2">Enter Number</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Input your tracking number
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <Truck className="w-10 h-10 text-accent mx-auto mb-3" />
-                  <h3 className="font-bold mb-2">View Status</h3>
-                  <p className="text-sm text-muted-foreground">
-                    See real-time updates
-                  </p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="pt-6">
-                  <CheckCircle2 className="w-10 h-10 text-primary mx-auto mb-3" />
-                  <h3 className="font-bold mb-2">Track Progress</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Monitor your shipment
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </section>
       )}
