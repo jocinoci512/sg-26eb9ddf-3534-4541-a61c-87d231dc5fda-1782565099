@@ -18,13 +18,22 @@ interface BlogPost {
   content: string;
   excerpt: string;
   featured_image: string | null;
-  author: string;
+  author_id: string | null;
+  category_id: string | null;
   published_at: string;
-  category: string;
   tags: string[];
+  seo_title?: string;
+  seo_description?: string;
+  author?: string;
+  category?: string;
   reading_time: number;
-  meta_title?: string;
-  meta_description?: string;
+}
+
+interface SimpleBlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  published_at: string;
 }
 
 export default function BlogPost() {
@@ -32,8 +41,8 @@ export default function BlogPost() {
   const { slug } = router.query;
   const [post, setPost] = useState<BlogPost | null>(null);
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
-  const [prevPost, setPrevPost] = useState<BlogPost | null>(null);
-  const [nextPost, setNextPost] = useState<BlogPost | null>(null);
+  const [prevPost, setPrevPost] = useState<SimpleBlogPost | null>(null);
+  const [nextPost, setNextPost] = useState<SimpleBlogPost | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -42,11 +51,21 @@ export default function BlogPost() {
     }
   }, [slug]);
 
+  const calculateReadingTime = (content: string): number => {
+    const wordsPerMinute = 200;
+    const wordCount = content.split(/\s+/).length;
+    return Math.ceil(wordCount / wordsPerMinute);
+  };
+
   const loadPost = async (postSlug: string) => {
     try {
       const { data: postData, error } = await supabase
         .from('blog_posts')
-        .select('*')
+        .select(`
+          *,
+          blog_categories (name),
+          staff (full_name)
+        `)
         .eq('slug', postSlug)
         .eq('status', 'published')
         .single();
@@ -57,18 +76,39 @@ export default function BlogPost() {
         return;
       }
 
-      setPost(postData);
+      const transformedPost = {
+        ...postData,
+        author: postData.staff?.full_name || 'Anonymous',
+        category: postData.blog_categories?.name || 'Uncategorized',
+        reading_time: calculateReadingTime(postData.content),
+      };
+
+      setPost(transformedPost);
 
       // Load related posts from same category
-      const { data: related } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('category', postData.category)
-        .eq('status', 'published')
-        .neq('id', postData.id)
-        .limit(3);
+      if (postData.category_id) {
+        const { data: related } = await supabase
+          .from('blog_posts')
+          .select(`
+            *,
+            blog_categories (name),
+            staff (full_name)
+          `)
+          .eq('category_id', postData.category_id)
+          .eq('status', 'published')
+          .neq('id', postData.id)
+          .limit(3);
 
-      setRelatedPosts(related || []);
+        if (related) {
+          const transformedRelated = related.map(r => ({
+            ...r,
+            author: r.staff?.full_name || 'Anonymous',
+            category: r.blog_categories?.name || 'Uncategorized',
+            reading_time: calculateReadingTime(r.content),
+          }));
+          setRelatedPosts(transformedRelated);
+        }
+      }
 
       // Load prev/next posts
       const { data: allPosts } = await supabase
@@ -79,8 +119,12 @@ export default function BlogPost() {
 
       if (allPosts) {
         const currentIndex = allPosts.findIndex(p => p.id === postData.id);
-        if (currentIndex > 0) setPrevPost(allPosts[currentIndex - 1]);
-        if (currentIndex < allPosts.length - 1) setNextPost(allPosts[currentIndex + 1]);
+        if (currentIndex > 0) {
+          setPrevPost(allPosts[currentIndex - 1] as SimpleBlogPost);
+        }
+        if (currentIndex < allPosts.length - 1) {
+          setNextPost(allPosts[currentIndex + 1] as SimpleBlogPost);
+        }
       }
     } catch (error) {
       console.error('Error loading post:', error);

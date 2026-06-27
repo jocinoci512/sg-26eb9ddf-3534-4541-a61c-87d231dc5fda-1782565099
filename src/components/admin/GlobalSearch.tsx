@@ -23,7 +23,7 @@ export function GlobalSearch() {
   const [loading, setLoading] = useState(false);
   const [recentSearches, setRecentSearches] = useState<SearchResult[]>([]);
   const router = useRouter();
-  const searchTimeout = useRef<NodeJS.Timeout>();
+  const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Load recent searches from localStorage

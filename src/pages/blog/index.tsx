@@ -15,11 +15,14 @@ interface BlogPost {
   title: string;
   slug: string;
   excerpt: string;
+  content: string;
   featured_image: string | null;
-  author: string;
+  author_id: string | null;
+  category_id: string | null;
   published_at: string;
-  category: string;
   tags: string[];
+  author?: string;
+  category?: string;
   reading_time: number;
 }
 
@@ -34,19 +37,36 @@ export default function BlogIndex() {
     loadPosts();
   }, []);
 
+  const calculateReadingTime = (content: string): number => {
+    const wordsPerMinute = 200;
+    const wordCount = content.split(/\s+/).length;
+    return Math.ceil(wordCount / wordsPerMinute);
+  };
+
   const loadPosts = async () => {
     try {
       const { data, error } = await supabase
         .from('blog_posts')
-        .select('*')
+        .select(`
+          *,
+          blog_categories (name),
+          staff (full_name)
+        `)
         .eq('status', 'published')
         .order('published_at', { ascending: false });
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setFeaturedPost(data[0]);
-        setPosts(data);
+        const transformedPosts = data.map(post => ({
+          ...post,
+          author: post.staff?.full_name || 'Anonymous',
+          category: post.blog_categories?.name || 'Uncategorized',
+          reading_time: calculateReadingTime(post.content),
+        }));
+        
+        setFeaturedPost(transformedPosts[0]);
+        setPosts(transformedPosts);
       }
     } catch (error) {
       console.error('Error loading blog posts:', error);
@@ -55,7 +75,7 @@ export default function BlogIndex() {
     }
   };
 
-  const categories = Array.from(new Set(posts.map(p => p.category))).filter(Boolean);
+  const categories = Array.from(new Set(posts.map(p => p.category).filter(Boolean)));
 
   const filteredPosts = posts.filter(post => {
     const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
