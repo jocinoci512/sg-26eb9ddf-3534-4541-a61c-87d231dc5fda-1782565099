@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ShipmentMap } from "@/components/ShipmentMap";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { 
@@ -298,6 +299,23 @@ export default function TrackingPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Real-Time Tracking Map */}
+            <div className="animate-fade-up [animation-delay:100ms]">
+              <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                <MapPin className="w-6 h-6 text-primary" />
+                Live Shipment Tracking
+              </h2>
+              <ShipmentMap
+                pickupAddress={shipment.pickup_address_line1}
+                pickupCity={shipment.pickup_city}
+                pickupState={shipment.pickup_state}
+                deliveryAddress={shipment.delivery_address_line1}
+                deliveryCity={shipment.delivery_city}
+                deliveryState={shipment.delivery_state}
+                status={shipment.status}
+              />
+            </div>
 
             <Card>
               <CardHeader>
