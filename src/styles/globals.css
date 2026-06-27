@@ -14,26 +14,26 @@
   :root {
     --radius: 0.5rem;
     
-    /* Go Cargo Logistics Corporate Palette */
+    /* Go Cargo Logistics Premium Dark Blue Palette */
     --background: 0 0% 100%;
-    --foreground: 215 25% 27%;
+    --foreground: 210 70% 13%;
     
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 27%;
+    --card-foreground: 210 70% 13%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 27%;
+    --popover-foreground: 210 70% 13%;
     
-    --primary: 210 100% 40%;
+    --primary: 210 70% 13%;
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 215 25% 27%;
+    --secondary: 210 69% 24%;
+    --secondary-foreground: 0 0% 100%;
     
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 214 32% 96%;
+    --muted-foreground: 210 20% 45%;
     
-    --accent: 199 89% 48%;
+    --accent: 212 70% 39%;
     --accent-foreground: 0 0% 100%;
     
     --destructive: 0 84% 60%;
@@ -41,54 +41,54 @@
     
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 210 100% 40%;
+    --ring: 212 70% 39%;
     
     /* Chart colors for analytics */
-    --chart-1: 210 100% 40%;
-    --chart-2: 199 89% 48%;
+    --chart-1: 210 70% 13%;
+    --chart-2: 212 70% 39%;
     --chart-3: 142 76% 36%;
     --chart-4: 262 83% 58%;
     --chart-5: 24 100% 50%;
     
-    /* Sidebar colors */
-    --sidebar: 0 0% 100%;
-    --sidebar-foreground: 215 25% 27%;
-    --sidebar-primary: 210 100% 40%;
+    /* Sidebar colors - Premium dark blue */
+    --sidebar: 210 70% 13%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 212 70% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 32% 91%;
-    --sidebar-accent-foreground: 215 25% 27%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 210 100% 40%;
+    --sidebar-accent: 210 69% 24%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 210 60% 20%;
+    --sidebar-ring: 212 70% 39%;
   }
 
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
+    --background: 210 70% 13%;
+    --foreground: 0 0% 98%;
     
-    --card: 222 47% 11%;
-    --card-foreground: 210 40% 98%;
+    --card: 210 69% 24%;
+    --card-foreground: 0 0% 98%;
     
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 210 69% 24%;
+    --popover-foreground: 0 0% 98%;
     
-    --primary: 210 100% 50%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 212 70% 39%;
+    --primary-foreground: 0 0% 100%;
     
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 60% 30%;
+    --secondary-foreground: 0 0% 98%;
     
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 210 60% 20%;
+    --muted-foreground: 210 20% 70%;
     
-    --accent: 199 89% 48%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 212 70% 39%;
+    --accent-foreground: 0 0% 100%;
     
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 98%;
     
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 210 100% 50%;
+    --border: 210 60% 20%;
+    --input: 210 60% 20%;
+    --ring: 212 70% 39%;
   }
 }
 
@@ -97,7 +97,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 }
 
@@ -107,10 +107,14 @@
   }
   
   .btn-gradient {
-    @apply bg-gradient-to-r from-primary to-accent;
+    @apply bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 transition-all;
   }
   
   .hero-gradient {
-    @apply bg-gradient-to-br from-primary via-primary/90 to-accent/80;
+    @apply bg-gradient-to-br from-primary via-secondary to-accent;
+  }
+  
+  .admin-sidebar {
+    @apply bg-gradient-to-b from-primary to-secondary;
   }
 }
