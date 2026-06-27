@@ -1,7 +1,7 @@
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -11,11 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Mail, RefreshCw, CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
+import { sendEmail } from "@/lib/resend";
+import { Mail, RefreshCw, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { emailService } from "@/services/emailService";
 
 interface EmailLog {
   id: string;
@@ -86,7 +85,7 @@ export default function EmailLogsPage() {
   const handleRetry = async (logId: string) => {
     setRetrying(logId);
     try {
-      const result = await emailService.retryEmail(logId);
+      const result = await sendEmail(logId);
 
       if (result.success) {
         toast({
