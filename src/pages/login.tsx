@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
 import { authService } from "@/services/authService";
 import { useRouter } from "next/router";
-import { LogIn, Loader2 } from "lucide-react";
+import { LogIn, Loader2, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -50,76 +50,74 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col">
       <Navigation />
 
-      <section className="flex-1 flex items-center justify-center py-16 bg-muted/30">
-        <div className="container max-w-md">
-          <Card>
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl">Customer Portal Login</CardTitle>
-              <CardDescription>
-                Access your shipments and account information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                    Forgot password?
-                  </Link>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full btn-gradient text-white"
-                  size="lg"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Sign In
-                    </>
-                  )}
-                </Button>
-              </form>
-
-              <Separator className="my-6" />
-
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground">
-                  Don't have an account?{" "}
-                  <Link href="/register" className="text-primary font-medium hover:underline">
-                    Create one now
-                  </Link>
-                </p>
+      <section className="py-16 min-h-screen flex items-center bg-muted/30">
+        <div className="container">
+          <div className="max-w-md mx-auto">
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 rounded-full hero-gradient mx-auto mb-4 flex items-center justify-center">
+                <Package className="w-8 h-8 text-white" />
               </div>
-            </CardContent>
-          </Card>
+              <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+              <p className="text-muted-foreground">
+                Sign in to access your customer portal
+              </p>
+            </div>
+
+            <Card className="shadow-xl">
+              <CardContent className="pt-6">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="password">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="w-full btn-gradient text-white"
+                    disabled={loading}
+                    size="lg"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      'Sign In'
+                    )}
+                  </Button>
+                </form>
+
+                <div className="mt-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Don't have an account?{' '}
+                    <Link href="/register" className="text-primary hover:underline font-medium">
+                      Sign up
+                    </Link>
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </section>
 

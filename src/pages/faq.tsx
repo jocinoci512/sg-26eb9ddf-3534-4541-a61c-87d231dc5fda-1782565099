@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { HelpCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function FAQPage() {
   const faqs = [
@@ -133,13 +134,17 @@ export default function FAQPage() {
     <div className="min-h-screen flex flex-col">
       <Navigation />
 
-      <section className="hero-gradient text-white py-16">
-        <div className="container text-center">
-          <HelpCircle className="w-16 h-16 mx-auto mb-4" />
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Frequently Asked Questions</h1>
-          <p className="text-xl text-white/90">
-            Find answers to common questions about our services
-          </p>
+      <section className="py-16 hero-gradient text-white">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center">
+            <Badge className="mb-4 bg-white/20 text-white border-white/30 backdrop-blur-sm">FAQ</Badge>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              Frequently Asked Questions
+            </h1>
+            <p className="text-lg text-white/90">
+              Find answers to common questions about our shipping services
+            </p>
+          </div>
         </div>
       </section>
 
