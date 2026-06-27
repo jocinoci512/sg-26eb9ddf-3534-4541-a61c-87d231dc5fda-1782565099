@@ -23,14 +23,15 @@ Complete quality assurance audit of Admin Dashboard and optimization of demo shi
 - [x] Verify global search functionality (tracking, customer, email)
 - [x] Test analytics tracking (page views, sessions, devices)
 - [x] Verify email logs and tracking
+- [x] Create additional customer records
+- [x] Test notification system
+- [x] Security audit (RLS policies verified)
 - [ ] Test shipment CRUD operations (create, read, update, delete)
 - [ ] Test customer management features
 - [ ] Test quote management workflow
 - [ ] Test PDF generation (labels, BOL, invoices)
 - [ ] Verify data consistency (admin → tracking → portal)
-- [ ] Test notification system
 - [ ] Test reports dashboard
-- [ ] Security audit (RLS, auth, permissions)
 - [ ] Performance optimization check
 - [ ] Final end-to-end validation
 
