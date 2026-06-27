@@ -340,6 +340,86 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          sent_at: string | null
+          shipment_id: string | null
+          status: string
+          subject: string
+          template_key: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          sent_at?: string | null
+          shipment_id?: string | null
+          status?: string
+          subject: string
+          template_key?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          sent_at?: string | null
+          shipment_id?: string | null
+          status?: string
+          subject?: string
+          template_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body_html: string
+          body_text: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          subject: string
+          template_key: string
+          updated_at: string
+          variables: Json | null
+        }
+        Insert: {
+          body_html: string
+          body_text: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          subject: string
+          template_key: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Update: {
+          body_html?: string
+          body_text?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          subject?: string
+          template_key?: string
+          updated_at?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       faqs: {
         Row: {
           answer: string
@@ -608,6 +688,59 @@ export type Database = {
           value?: string | null
         }
         Relationships: []
+      }
+      shipment_events: {
+        Row: {
+          created_at: string
+          event_description: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          new_value: string | null
+          old_value: string | null
+          performed_by: string | null
+          performed_by_name: string | null
+          performed_by_role: string | null
+          shipment_id: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_description: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+          performed_by_role?: string | null
+          shipment_id: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_description?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          new_value?: string | null
+          old_value?: string | null
+          performed_by?: string | null
+          performed_by_name?: string | null
+          performed_by_role?: string | null
+          shipment_id?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shipment_events_shipment_id_fkey"
+            columns: ["shipment_id"]
+            isOneToOne: false
+            referencedRelation: "shipments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shipments: {
         Row: {
