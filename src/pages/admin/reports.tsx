@@ -83,10 +83,15 @@ export default function ReportsPage() {
       shipmentsList.forEach(s => {
         typeMap[s.shipment_type] = (typeMap[s.shipment_type] || 0) + 1;
       });
+      
+      const shipmentTypes = Object.entries(typeMap).map(([type, count]) => ({
+        type,
+        count,
+      }));
 
       const report: MonthlyReportData = {
         month: months[monthIndex],
-        year,
+        year: year.toString(),
         totalShipments,
         activeShipments,
         deliveredShipments,
@@ -94,7 +99,7 @@ export default function ReportsPage() {
         cancelledShipments,
         revenue,
         topRoutes,
-        shipmentTypes: typeMap,
+        shipmentTypes,
       };
 
       setReportData(report);
@@ -103,68 +108,6 @@ export default function ReportsPage() {
       toast({
         title: "Error",
         description: "Failed to generate report",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMonthlyStats = async () => {
-    try {
-      const startDate = new Date(selectedYear, selectedMonth - 1, 1);
-      const endDate = new Date(selectedYear, selectedMonth, 0);
-
-      const { data: shipments, error } = await supabase
-        .from('shipments')
-        .select('*')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString());
-
-      if (error) throw error;
-
-      const stats = {
-        month: new Date(selectedYear, selectedMonth - 1).toLocaleString('default', { month: 'long' }),
-        year: selectedYear.toString(),
-        totalShipments: shipments?.length || 0,
-        activeShipments: shipments?.filter(s => ['pending_pickup', 'picked_up', 'in_transit', 'out_for_delivery'].includes(s.status)).length || 0,
-        deliveredShipments: shipments?.filter(s => s.status === 'delivered').length || 0,
-        delayedShipments: shipments?.filter(s => s.status === 'delayed').length || 0,
-        cancelledShipments: shipments?.filter(s => s.status === 'cancelled').length || 0,
-      };
-
-      // Calculate shipment types
-      const typeCounts: Record<string, number> = {};
-      shipments?.forEach(s => {
-        const type = s.shipment_type || 'Unknown';
-        typeCounts[type] = (typeCounts[type] || 0) + 1;
-      });
-
-      const shipmentTypes = Object.entries(typeCounts).map(([type, count]) => ({
-        type,
-        count,
-      }));
-
-      // Calculate top routes
-      const routeCounts: Record<string, number> = {};
-      shipments?.forEach(s => {
-        if (s.pickup_city && s.delivery_city) {
-          const route = `${s.pickup_city} → ${s.delivery_city}`;
-          routeCounts[route] = (routeCounts[route] || 0) + 1;
-        }
-      });
-
-      const topRoutes = Object.entries(routeCounts)
-        .map(([route, count]) => ({ route, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-
-      setMonthlyStats({ ...stats, shipmentTypes, topRoutes });
-    } catch (error) {
-      console.error('Error loading monthly stats:', error);
-      toast({
-        title: "Error loading stats",
-        description: "Failed to load monthly statistics",
         variant: "destructive",
       });
     } finally {
@@ -291,7 +234,9 @@ export default function ReportsPage() {
                   <DollarSign className="w-5 h-5 text-accent" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-bold">${reportData.revenue.toLocaleString()}</div>
+                  <div className="text-3xl font-bold">
+                    ${reportData.revenue ? reportData.revenue.toLocaleString() : '0'}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Estimated total
                   </p>
@@ -305,7 +250,7 @@ export default function ReportsPage() {
                   <CardTitle>Top Shipping Routes</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {reportData.topRoutes.length === 0 ? (
+                  {!reportData.topRoutes || reportData.topRoutes.length === 0 ? (
                     <p className="text-muted-foreground text-center py-8">No routes data</p>
                   ) : (
                     <div className="space-y-3">
@@ -326,8 +271,8 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {monthlyStats.shipmentTypes && monthlyStats.shipmentTypes.length > 0 ? (
-                      monthlyStats.shipmentTypes.map((item, index) => (
+                    {reportData.shipmentTypes && reportData.shipmentTypes.length > 0 ? (
+                      reportData.shipmentTypes.map((item, index) => (
                         <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                           <span className="font-medium">{item.type}</span>
                           <span className="text-muted-foreground">{item.count} shipments</span>
