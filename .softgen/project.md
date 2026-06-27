@@ -26,6 +26,8 @@ Premium dark blue enterprise design with authoritative trust signals.
 ## Features
 ✅ Public website (15+ pages) with premium dark blue design
 ✅ Shipment tracking with comprehensive details and timeline
+✅ **Real-time GPS map with animated route visualization**
+✅ **Live position tracking with progress percentage and ETA**
 ✅ Customer portal with Supabase authentication
 ✅ Admin dashboard (shipments, quotes, customers, analytics)
 ✅ Quote request system with approval workflow
@@ -45,3 +47,4 @@ Premium dark blue enterprise design with authoritative trust signals.
 - ✅ Professional UI/UX polish
 - ✅ Smooth animations and transitions
 - ✅ Enterprise-grade performance optimization
+- ✅ Real-time shipment tracking with animated GPS map
