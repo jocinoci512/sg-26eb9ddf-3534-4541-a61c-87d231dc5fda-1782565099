@@ -23,11 +23,16 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Shipment = Database['public']['Tables']['shipments']['Row'];
 type TrackingUpdate = Database['public']['Tables']['tracking_updates']['Row'];
+type Vehicle = Database['public']['Tables']['vehicles']['Row'];
+
+type ShipmentWithVehicle = Shipment & {
+  vehicles?: Vehicle | null;
+};
 
 export default function TrackingPage() {
   const router = useRouter();
   const [trackingNumber, setTrackingNumber] = useState("");
-  const [shipment, setShipment] = useState<Shipment | null>(null);
+  const [shipment, setShipment] = useState<ShipmentWithVehicle | null>(null);
   const [trackingUpdates, setTrackingUpdates] = useState<TrackingUpdate[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
