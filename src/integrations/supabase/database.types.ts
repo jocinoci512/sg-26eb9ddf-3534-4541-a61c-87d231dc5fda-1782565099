@@ -558,7 +558,12 @@ export type Database = {
           message: string
           shipment_id: string | null
           title: string
-          type: string
+          type:
+            | "shipment_created"
+            | "shipment_updated"
+            | "shipment_delayed"
+            | "quote_received"
+            | "system_alert"
           user_id: string | null
         }
         Insert: {
@@ -569,7 +574,12 @@ export type Database = {
           message: string
           shipment_id?: string | null
           title: string
-          type: string
+          type:
+            | "shipment_created"
+            | "shipment_updated"
+            | "shipment_delayed"
+            | "quote_received"
+            | "system_alert"
           user_id?: string | null
         }
         Update: {
@@ -580,7 +590,12 @@ export type Database = {
           message?: string
           shipment_id?: string | null
           title?: string
-          type?: string
+          type?:
+            | "shipment_created"
+            | "shipment_updated"
+            | "shipment_delayed"
+            | "quote_received"
+            | "system_alert"
           user_id?: string | null
         }
         Relationships: [
