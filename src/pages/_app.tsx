@@ -1,11 +1,10 @@
 import "@/styles/globals.css";
 import type { AppProps } from "next/app";
-import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { Toaster } from "@/components/ui/toaster";
-import { useEffect } from "react";
+import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { analyticsService } from "@/services/analyticsService";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();

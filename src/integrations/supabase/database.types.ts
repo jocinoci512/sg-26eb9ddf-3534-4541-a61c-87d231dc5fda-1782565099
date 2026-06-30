@@ -908,18 +908,25 @@ export type Database = {
           actual_delivery_date: string | null
           carrier_id: string | null
           created_at: string | null
+          current_latitude: number | null
+          current_longitude: number | null
           customer_id: string | null
           damage_inspection: string | null
+          delay_duration_hours: number | null
+          delay_reason: string | null
           delivery_address_line1: string
           delivery_address_line2: string | null
           delivery_city: string
           delivery_country: string | null
+          delivery_latitude: number | null
+          delivery_longitude: number | null
           delivery_state: string
           delivery_zip_code: string
           driver_id: string | null
           estimated_delivery_date: string | null
           id: string
           internal_notes: string | null
+          is_delayed: boolean | null
           notes: string | null
           paid_amount: number | null
           payment_status: string | null
@@ -928,6 +935,8 @@ export type Database = {
           pickup_city: string
           pickup_country: string | null
           pickup_date: string | null
+          pickup_latitude: number | null
+          pickup_longitude: number | null
           pickup_state: string
           pickup_zip_code: string
           priority: string | null
@@ -948,18 +957,25 @@ export type Database = {
           actual_delivery_date?: string | null
           carrier_id?: string | null
           created_at?: string | null
+          current_latitude?: number | null
+          current_longitude?: number | null
           customer_id?: string | null
           damage_inspection?: string | null
+          delay_duration_hours?: number | null
+          delay_reason?: string | null
           delivery_address_line1: string
           delivery_address_line2?: string | null
           delivery_city: string
           delivery_country?: string | null
+          delivery_latitude?: number | null
+          delivery_longitude?: number | null
           delivery_state: string
           delivery_zip_code: string
           driver_id?: string | null
           estimated_delivery_date?: string | null
           id?: string
           internal_notes?: string | null
+          is_delayed?: boolean | null
           notes?: string | null
           paid_amount?: number | null
           payment_status?: string | null
@@ -968,6 +984,8 @@ export type Database = {
           pickup_city: string
           pickup_country?: string | null
           pickup_date?: string | null
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
           pickup_state: string
           pickup_zip_code: string
           priority?: string | null
@@ -988,18 +1006,25 @@ export type Database = {
           actual_delivery_date?: string | null
           carrier_id?: string | null
           created_at?: string | null
+          current_latitude?: number | null
+          current_longitude?: number | null
           customer_id?: string | null
           damage_inspection?: string | null
+          delay_duration_hours?: number | null
+          delay_reason?: string | null
           delivery_address_line1?: string
           delivery_address_line2?: string | null
           delivery_city?: string
           delivery_country?: string | null
+          delivery_latitude?: number | null
+          delivery_longitude?: number | null
           delivery_state?: string
           delivery_zip_code?: string
           driver_id?: string | null
           estimated_delivery_date?: string | null
           id?: string
           internal_notes?: string | null
+          is_delayed?: boolean | null
           notes?: string | null
           paid_amount?: number | null
           payment_status?: string | null
@@ -1008,6 +1033,8 @@ export type Database = {
           pickup_city?: string
           pickup_country?: string | null
           pickup_date?: string | null
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
           pickup_state?: string
           pickup_zip_code?: string
           priority?: string | null
