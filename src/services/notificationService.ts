@@ -14,11 +14,13 @@ export type NotificationType =
 
 interface CreateNotificationParams {
   userId: string;
+  customerId?: string;
   type: 'shipment_created' | 'shipment_updated' | 'shipment_delayed' | 'quote_received' | 'system_alert';
   title: string;
   message: string;
   shipmentId?: string;
   quoteId?: string;
+  metadata?: Record<string, any>;
 }
 
 export const notificationService = {
@@ -238,11 +240,13 @@ export const notificationService = {
  */
 export async function createNotification(params: {
   userId: string;
+  customerId?: string;
   type: 'shipment_created' | 'shipment_updated' | 'shipment_delayed' | 'quote_received' | 'system_alert';
   title: string;
   message: string;
   shipmentId?: string;
   quoteId?: string;
+  metadata?: Record<string, any>;
 }) {
   try {
     const result = await notificationService.createNotification(params);
