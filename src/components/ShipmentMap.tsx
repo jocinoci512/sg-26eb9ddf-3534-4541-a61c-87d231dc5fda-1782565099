@@ -1,17 +1,20 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { Truck, Package, Plane, Ship, Train, Loader2 } from 'lucide-react';
-import { 
-  geocodeAddress, 
-  calculateTruckRoute, 
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, MapPin, Package, TrendingUp } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  geocodeAddress,
+  calculateTruckRoute,
   calculatePositionOnRoute,
   formatDistance,
   formatDuration,
+  calculateETA,
   type HERECoordinates,
-  type HERERouteData,
 } from '@/services/hereMapsService';
-import { supabase } from '@/integrations/supabase/client';
+import { getMapStyleUrl, routeLineStyle, markerColors } from '@/lib/mapStyles';
 
 interface ShipmentMapProps {
   shipmentId?: string;
@@ -90,7 +93,7 @@ export function ShipmentMap({
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: getMapStyleUrl('light'), // Use custom Go Cargo style
       center: [-98.5795, 39.8283], // Center of USA
       zoom: 4,
     });
@@ -174,51 +177,36 @@ export function ShipmentMap({
           )
           .addTo(map.current);
 
-        // Add route line
-        const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: route.path.map(p => [p.lng, p.lat]),
+        // Add route line with custom Go Cargo styling
+        map.addSource('route', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: {
+              type: 'LineString',
+              coordinates: routeData.path.map(p => [p.lng, p.lat]),
+            },
           },
-        };
+        });
 
-        if (map.current.getSource('route')) {
-          (map.current.getSource('route') as mapboxgl.GeoJSONSource).setData(routeGeoJSON);
-        } else {
-          map.current.addSource('route', {
-            type: 'geojson',
-            data: routeGeoJSON,
-          });
-
-          map.current.addLayer({
-            id: 'route-line',
-            type: 'line',
-            source: 'route',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round',
-            },
-            paint: {
-              'line-color': '#1E5AA8',
-              'line-width': 5,
-              'line-opacity': 0.8,
-            },
-          });
-        }
+        map.addLayer({
+          id: 'route',
+          ...routeLineStyle,
+          source: 'route',
+        });
 
         // Fit map to route bounds
         const bounds = new mapboxgl.LngLatBounds();
-        route.path.forEach(p => bounds.extend([p.lng, p.lat]));
+        routeData.path.forEach(p => bounds.extend([p.lng, p.lat]));
         map.current.fitBounds(bounds, { padding: 80 });
 
         // Calculate initial progress and position
         const initialProgress = calculateProgressFromStatus(currentStatus);
         setProgress(initialProgress);
 
-        if (route.path.length > 0) {
-          const position = calculatePositionOnRoute(route.path, initialProgress);
+        if (routeData.path.length > 0) {
+          const position = calculatePositionOnRoute(routeData.path, initialProgress);
           setCurrentPosition(position);
 
           // Add vehicle marker
