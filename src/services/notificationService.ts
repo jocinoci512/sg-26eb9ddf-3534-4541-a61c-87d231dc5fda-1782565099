@@ -237,7 +237,14 @@ export const notificationService = {
  * Standalone createNotification function
  * Wrapper around notificationService.createNotification for easier imports
  */
-export async function createNotification(params: CreateNotificationParams): Promise<{ success: boolean; error?: string }> {
+export async function createNotification(params: {
+  userId: string;
+  type: 'shipment_created' | 'shipment_updated' | 'shipment_delayed' | 'quote_received' | 'system_alert';
+  title: string;
+  message: string;
+  shipmentId?: string;
+  quoteId?: string;
+}) {
   try {
     const result = await notificationService.createNotification(params);
     if (result.error) {
