@@ -1239,6 +1239,69 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          dashboard_notifications_enabled: boolean | null
+          dashboard_quote_updates: boolean | null
+          dashboard_shipment_updates: boolean | null
+          dashboard_system_alerts: boolean | null
+          email_notifications_enabled: boolean | null
+          email_quote_updates: boolean | null
+          email_shipment_created: boolean | null
+          email_shipment_delayed: boolean | null
+          email_shipment_delivered: boolean | null
+          email_shipment_in_transit: boolean | null
+          email_shipment_picked_up: boolean | null
+          id: string
+          notification_frequency: string | null
+          push_notifications_enabled: boolean | null
+          sms_notifications_enabled: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dashboard_notifications_enabled?: boolean | null
+          dashboard_quote_updates?: boolean | null
+          dashboard_shipment_updates?: boolean | null
+          dashboard_system_alerts?: boolean | null
+          email_notifications_enabled?: boolean | null
+          email_quote_updates?: boolean | null
+          email_shipment_created?: boolean | null
+          email_shipment_delayed?: boolean | null
+          email_shipment_delivered?: boolean | null
+          email_shipment_in_transit?: boolean | null
+          email_shipment_picked_up?: boolean | null
+          id?: string
+          notification_frequency?: string | null
+          push_notifications_enabled?: boolean | null
+          sms_notifications_enabled?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dashboard_notifications_enabled?: boolean | null
+          dashboard_quote_updates?: boolean | null
+          dashboard_shipment_updates?: boolean | null
+          dashboard_system_alerts?: boolean | null
+          email_notifications_enabled?: boolean | null
+          email_quote_updates?: boolean | null
+          email_shipment_created?: boolean | null
+          email_shipment_delayed?: boolean | null
+          email_shipment_delivered?: boolean | null
+          email_shipment_in_transit?: boolean | null
+          email_shipment_picked_up?: boolean | null
+          id?: string
+          notification_frequency?: string | null
+          push_notifications_enabled?: boolean | null
+          sms_notifications_enabled?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           color: string | null
