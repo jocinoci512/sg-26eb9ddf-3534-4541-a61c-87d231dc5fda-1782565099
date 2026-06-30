@@ -132,7 +132,7 @@ export function ShipmentMap({
         // Create map with minimal, professional style
         const newMap = new mapboxgl.Map({
           container: mapContainer.current!,
-          style: 'mapbox://styles/mapbox/light-v11', // Clean, minimal style
+          style: 'mapbox://styles/mapbox/streets-v12', // Clean minimal style with reduced labels
           center: pickupCoords,
           zoom: 4,
           attributionControl: false,
