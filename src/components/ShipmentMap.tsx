@@ -38,7 +38,10 @@ export function ShipmentMap({
 }: ShipmentMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const vehicleMarker = useRef<mapboxgl.Marker | null>(null);
   const [progress, setProgress] = useState(0);
+  const [pickupCoords, setPickupCoords] = useState<[number, number] | null>(null);
+  const [deliveryCoords, setDeliveryCoords] = useState<[number, number] | null>(null);
 
   // Get vehicle icon
   const getVehicleIcon = () => {
@@ -66,9 +69,10 @@ export function ShipmentMap({
     setProgress(newProgress);
   }, [currentStatus]);
 
-  // Initialize simple map
+  // Initialize map ONCE (only when locations change)
   useEffect(() => {
     if (!mapContainer.current) return;
+    if (map.current) return; // Map already initialized
 
     // Check if Mapbox token exists
     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
@@ -113,12 +117,15 @@ export function ShipmentMap({
           return;
         }
 
-        const pickupCoords = pickupData.features[0].center;
-        const deliveryCoords = deliveryData.features[0].center;
+        const pickup: [number, number] = pickupData.features[0].center;
+        const delivery: [number, number] = deliveryData.features[0].center;
+
+        setPickupCoords(pickup);
+        setDeliveryCoords(delivery);
 
         // Add pickup marker (dark blue)
         new mapboxgl.Marker({ color: '#0B1F3A' })
-          .setLngLat(pickupCoords)
+          .setLngLat(pickup)
           .setPopup(
             new mapboxgl.Popup({ offset: 25 }).setHTML(
               `<div class="p-2"><strong>Pickup</strong><br/>${pickupCity}, ${pickupState}</div>`
@@ -128,7 +135,7 @@ export function ShipmentMap({
 
         // Add delivery marker (light blue)
         new mapboxgl.Marker({ color: '#1E5AA8' })
-          .setLngLat(deliveryCoords)
+          .setLngLat(delivery)
           .setPopup(
             new mapboxgl.Popup({ offset: 25 }).setHTML(
               `<div class="p-2"><strong>Delivery</strong><br/>${deliveryCity}, ${deliveryState}</div>`
@@ -144,7 +151,7 @@ export function ShipmentMap({
             properties: {},
             geometry: {
               type: 'LineString',
-              coordinates: [pickupCoords, deliveryCoords],
+              coordinates: [pickup, delivery],
             },
           },
         });
@@ -164,28 +171,24 @@ export function ShipmentMap({
           },
         });
 
-        // Calculate vehicle position along line
-        const lng = pickupCoords[0] + (deliveryCoords[0] - pickupCoords[0]) * (progress / 100);
-        const lat = pickupCoords[1] + (deliveryCoords[1] - pickupCoords[1]) * (progress / 100);
-
-        // Add vehicle marker
+        // Create vehicle marker
         const vehicleEl = document.createElement('div');
         vehicleEl.innerHTML = getVehicleIcon();
         vehicleEl.style.cssText = 'font-size:32px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))';
 
-        new mapboxgl.Marker({ element: vehicleEl })
-          .setLngLat([lng, lat])
+        vehicleMarker.current = new mapboxgl.Marker({ element: vehicleEl })
+          .setLngLat(pickup)
           .setPopup(
             new mapboxgl.Popup({ offset: 25 }).setHTML(
-              `<div class="p-2"><strong>Current Location</strong><br/>${progress}% complete<br/>Status: ${currentStatus.replace('_', ' ').toUpperCase()}</div>`
+              `<div class="p-2"><strong>Current Location</strong><br/>0% complete<br/>Status: BOOKED</div>`
             )
           )
           .addTo(map.current);
 
         // Fit map to show both markers
         const bounds = new mapboxgl.LngLatBounds();
-        bounds.extend(pickupCoords);
-        bounds.extend(deliveryCoords);
+        bounds.extend(pickup);
+        bounds.extend(delivery);
         map.current.fitBounds(bounds, { padding: 80 });
 
       } catch (error) {
@@ -194,9 +197,30 @@ export function ShipmentMap({
     });
 
     return () => {
+      vehicleMarker.current?.remove();
       map.current?.remove();
+      map.current = null;
     };
-  }, [pickupCity, pickupState, deliveryCity, deliveryState, progress, shipmentType, currentStatus]);
+  }, [pickupCity, pickupState, deliveryCity, deliveryState, shipmentType]);
+
+  // Update vehicle position when progress changes (without recreating map)
+  useEffect(() => {
+    if (!vehicleMarker.current || !pickupCoords || !deliveryCoords) return;
+
+    // Calculate new vehicle position
+    const lng = pickupCoords[0] + (deliveryCoords[0] - pickupCoords[0]) * (progress / 100);
+    const lat = pickupCoords[1] + (deliveryCoords[1] - pickupCoords[1]) * (progress / 100);
+
+    // Update marker position
+    vehicleMarker.current.setLngLat([lng, lat]);
+
+    // Update popup content
+    const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
+      `<div class="p-2"><strong>Current Location</strong><br/>${progress}% complete<br/>Status: ${currentStatus.replace('_', ' ').toUpperCase()}</div>`
+    );
+    vehicleMarker.current.setPopup(popup);
+
+  }, [progress, currentStatus, pickupCoords, deliveryCoords]);
 
   // Check if API key is configured
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;

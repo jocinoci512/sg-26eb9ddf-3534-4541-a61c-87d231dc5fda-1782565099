@@ -1,16 +1,16 @@
 ---
-title: Simplify Tracking Map - Remove GPS Features
+title: Simplify Tracking Map - Remove GPS Features & Fix AbortError
 status: done
 priority: urgent
 type: refactor
-tags: [simplification, maps, tracking]
+tags: [simplification, maps, tracking, bugfix, performance]
 created_by: agent
 created_at: 2026-06-30T20:28:00Z
 position: 18
 ---
 
 ## Notes
-Simplified GPS tracking to basic shipment route visualization. Removed complex GPS monitoring, HERE Maps API, and real-time coordinate tracking. Now uses only Mapbox with built-in geocoding for simple pickup-to-delivery route display. Includes elegant fallback UI when Mapbox isn't configured.
+Simplified GPS tracking to basic shipment route visualization and fixed runtime AbortError. Removed complex GPS monitoring, HERE Maps API, and real-time coordinate tracking. Split useEffect to prevent map recreation on status changes - now map initializes once and only vehicle marker updates. Performance and stability greatly improved.
 
 ## Checklist
 - [x] Simplify ShipmentMap component (removed 200+ lines of complexity)
@@ -23,6 +23,8 @@ Simplified GPS tracking to basic shipment route visualization. Removed complex G
 - [x] Keep basic route line visualization (straight line between locations)
 - [x] Remove GPS coordinate columns from database
 - [x] Add elegant fallback UI for unconfigured API
+- [x] Fix AbortError by splitting map initialization and updates
+- [x] Prevent unnecessary map recreation on status changes
 - [x] Test simplified map functionality
 - [x] Ensure fast loading (< 500ms)
 
@@ -33,3 +35,5 @@ Simplified GPS tracking to basic shipment route visualization. Removed complex G
 - Clean, minimal UI ✓
 - Works with and without API configuration ✓
 - Zero complex dependencies ✓
+- No AbortError on status updates ✓
+- Vehicle marker smoothly updates position ✓
