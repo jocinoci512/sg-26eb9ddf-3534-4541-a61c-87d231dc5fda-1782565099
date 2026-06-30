@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import {
   formatDuration,
   calculateETA,
   type HERECoordinates,
+  type HERERouteData,
 } from '@/services/hereMapsService';
 import { getMapStyleUrl, routeLineStyle, markerColors } from '@/lib/mapStyles';
 
@@ -178,19 +179,19 @@ export function ShipmentMap({
           .addTo(map.current);
 
         // Add route line with custom Go Cargo styling
-        map.addSource('route', {
+        map.current.addSource('route', {
           type: 'geojson',
           data: {
             type: 'Feature',
             properties: {},
             geometry: {
               type: 'LineString',
-              coordinates: routeData.path.map(p => [p.lng, p.lat]),
+              coordinates: route.path.map(p => [p.lng, p.lat]),
             },
           },
         });
 
-        map.addLayer({
+        map.current.addLayer({
           id: 'route',
           ...routeLineStyle,
           source: 'route',
@@ -198,15 +199,15 @@ export function ShipmentMap({
 
         // Fit map to route bounds
         const bounds = new mapboxgl.LngLatBounds();
-        routeData.path.forEach(p => bounds.extend([p.lng, p.lat]));
+        route.path.forEach(p => bounds.extend([p.lng, p.lat]));
         map.current.fitBounds(bounds, { padding: 80 });
 
         // Calculate initial progress and position
         const initialProgress = calculateProgressFromStatus(currentStatus);
         setProgress(initialProgress);
 
-        if (routeData.path.length > 0) {
-          const position = calculatePositionOnRoute(routeData.path, initialProgress);
+        if (route.path.length > 0) {
+          const position = calculatePositionOnRoute(route.path, initialProgress);
           setCurrentPosition(position);
 
           // Add vehicle marker

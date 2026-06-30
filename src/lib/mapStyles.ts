@@ -437,7 +437,7 @@ export const markerColors = {
  * Map configuration options
  */
 export const mapConfig = {
-  defaultCenter: { lng: -98.5795, lat: 39.8283 } as [number, number], // Center of USA
+  defaultCenter: [-98.5795, 39.8283] as [number, number], // Center of USA
   defaultZoom: 4,
   minZoom: 2,
   maxZoom: 18,

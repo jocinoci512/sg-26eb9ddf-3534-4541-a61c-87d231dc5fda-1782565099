@@ -176,15 +176,15 @@ export async function processDelayedShipments(): Promise<{
 
         // Create admin notification
         const { data: adminUsers } = await supabase
-          .from('users')
-          .select('id')
-          .eq('role', 'admin')
+          .from('staff')
+          .select('id, user_id')
+          .eq('is_active', true)
           .limit(10);
 
         if (adminUsers && adminUsers.length > 0) {
           for (const admin of adminUsers) {
             await createNotification({
-              userId: admin.id,
+              userId: admin.user_id,
               type: 'shipment_delayed',
               title: 'Shipment Delay Alert',
               message: `Shipment ${shipment.tracking_number} is delayed by ${shipment.delay_duration_hours}h. Customer: ${shipment.customer_name}`,
