@@ -319,7 +319,6 @@ export default function TrackingPage() {
                 Live GPS Tracking
               </h2>
               <ShipmentMap
-                shipmentId={shipment.id}
                 pickupCity={shipment.pickup_city}
                 pickupState={shipment.pickup_state}
                 deliveryCity={shipment.delivery_city}
