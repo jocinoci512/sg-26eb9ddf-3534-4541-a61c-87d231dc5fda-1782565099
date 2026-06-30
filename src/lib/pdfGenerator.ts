@@ -411,3 +411,264 @@ export function printMonthlyReport(data: MonthlyReportData) {
     }, 250);
   }
 }
+
+/**
+ * Generate shipment tracking details PDF
+ */
+export async function generateShipmentPDF(shipment: any, trackingUpdates: any[]) {
+  const formatStatus = (status: string) => {
+    return status.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Shipment Details - ${shipment.tracking_number}</title>
+  <style>
+    @media print {
+      @page { margin: 15mm; }
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20mm;
+      background: white;
+      color: #333;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 3px solid #0B1F3A;
+      padding-bottom: 10mm;
+      margin-bottom: 10mm;
+    }
+    .logo {
+      width: 80mm;
+      height: auto;
+      margin: 0 auto 5mm;
+    }
+    .company-name {
+      font-size: 24pt;
+      font-weight: bold;
+      color: #0B1F3A;
+      margin-bottom: 2mm;
+    }
+    .tracking-number {
+      font-size: 20pt;
+      font-weight: bold;
+      margin: 5mm 0;
+      color: #1E5AA8;
+      font-family: monospace;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 2mm 5mm;
+      background: #1E5AA8;
+      color: white;
+      border-radius: 2mm;
+      font-size: 12pt;
+      font-weight: bold;
+    }
+    .section {
+      margin: 8mm 0;
+    }
+    .section-title {
+      font-size: 14pt;
+      font-weight: bold;
+      color: #0B1F3A;
+      margin-bottom: 3mm;
+      padding-bottom: 2mm;
+      border-bottom: 2px solid #e0e0e0;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5mm;
+      margin: 5mm 0;
+    }
+    .info-card {
+      border: 1px solid #e0e0e0;
+      padding: 4mm;
+      border-radius: 2mm;
+    }
+    .info-label {
+      font-size: 9pt;
+      color: #666;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-bottom: 1mm;
+    }
+    .info-value {
+      font-size: 11pt;
+      color: #333;
+    }
+    .timeline {
+      margin-top: 5mm;
+    }
+    .timeline-item {
+      display: flex;
+      gap: 3mm;
+      margin-bottom: 4mm;
+      padding: 3mm;
+      border-left: 3px solid #1E5AA8;
+      padding-left: 4mm;
+    }
+    .timeline-dot {
+      width: 8mm;
+      height: 8mm;
+      background: #1E5AA8;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 1mm;
+    }
+    .timeline-content {
+      flex: 1;
+    }
+    .timeline-status {
+      font-weight: bold;
+      font-size: 11pt;
+      margin-bottom: 1mm;
+    }
+    .timeline-date {
+      font-size: 9pt;
+      color: #666;
+      margin-bottom: 2mm;
+    }
+    .timeline-location {
+      font-size: 10pt;
+      color: #555;
+    }
+    .footer {
+      margin-top: 15mm;
+      padding-top: 5mm;
+      border-top: 2px solid #e0e0e0;
+      text-align: center;
+      font-size: 9pt;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <img src="/logo-main.png" alt="Go Cargo Logistics" class="logo">
+    <div class="company-name">GO CARGO LOGISTICS</div>
+    <div class="tracking-number">${shipment.tracking_number}</div>
+    <div class="status-badge">${formatStatus(shipment.status)}</div>
+  </div>
+  
+  <div class="section">
+    <div class="section-title">Shipment Information</div>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-label">Pickup Location</div>
+        <div class="info-value">
+          ${shipment.pickup_address_line1}<br>
+          ${shipment.pickup_city}, ${shipment.pickup_state} ${shipment.pickup_zip_code}
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Delivery Location</div>
+        <div class="info-value">
+          ${shipment.delivery_address_line1}<br>
+          ${shipment.delivery_city}, ${shipment.delivery_state} ${shipment.delivery_zip_code}
+        </div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Shipment Type</div>
+        <div class="info-value">${formatStatus(shipment.shipment_type || 'Standard')}</div>
+      </div>
+      ${shipment.estimated_delivery_date ? `
+      <div class="info-card">
+        <div class="info-label">Estimated Delivery</div>
+        <div class="info-value">${new Date(shipment.estimated_delivery_date).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })}</div>
+      </div>
+      ` : ''}
+    </div>
+  </div>
+  
+  ${shipment.vehicles ? `
+  <div class="section">
+    <div class="section-title">Vehicle Information</div>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-label">Make & Model</div>
+        <div class="info-value">${shipment.vehicles.make} ${shipment.vehicles.model}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-label">Year</div>
+        <div class="info-value">${shipment.vehicles.year}</div>
+      </div>
+      ${shipment.vehicles.color ? `
+      <div class="info-card">
+        <div class="info-label">Color</div>
+        <div class="info-value">${shipment.vehicles.color}</div>
+      </div>
+      ` : ''}
+    </div>
+  </div>
+  ` : ''}
+  
+  ${trackingUpdates.length > 0 ? `
+  <div class="section">
+    <div class="section-title">Shipment Timeline</div>
+    <div class="timeline">
+      ${trackingUpdates.map(update => `
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-status">${formatStatus(update.status)}</div>
+            <div class="timeline-date">${new Date(update.created_at).toLocaleDateString('en-US', {
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}</div>
+            ${update.location ? `<div class="timeline-location">📍 ${update.location}</div>` : ''}
+            ${update.notes ? `<div class="timeline-location">${update.notes}</div>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  </div>
+  ` : ''}
+  
+  <div class="footer">
+    <div style="font-weight: bold;">Go Cargo Logistics</div>
+    <div>support@gocargologisticsus.com | +1 (940) 238-4915</div>
+    <div>gocargologisticsus.com</div>
+    <div style="margin-top: 3mm; color: #999;">
+      Generated on ${new Date().toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+
+  // Open in new window and trigger print
+  const printWindow = window.open('', '_blank');
+  
+  if (printWindow) {
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  }
+}
