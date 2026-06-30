@@ -232,3 +232,19 @@ export const notificationService = {
     }
   },
 };
+
+/**
+ * Standalone createNotification function
+ * Wrapper around notificationService.createNotification for easier imports
+ */
+export async function createNotification(params: CreateNotificationParams): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await notificationService.createNotification(params);
+    if (result.error) {
+      return { success: false, error: String(result.error) };
+    }
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
