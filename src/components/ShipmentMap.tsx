@@ -3,7 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Package, Truck, Ship, Plane, Navigation, Loader2, AlertCircle } from 'lucide-react';
+import { MapPin, Package, Navigation, Loader2, AlertCircle } from 'lucide-react';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
@@ -37,9 +37,12 @@ const getVehicleIcon = (type?: string) => {
   if (!type) return '🚛';
   const iconMap: Record<string, string> = {
     'truck': '🚛',
-    'air': '✈️',
-    'ocean': '🚢',
-    'rail': '🚂',
+    'open_carrier': '🚛',
+    'enclosed_carrier': '🚛',
+    'air_freight': '✈️',
+    'ocean_freight': '🚢',
+    'rail_freight': '🚂',
+    'expedited': '⚡',
   };
   return iconMap[type.toLowerCase()] || '🚛';
 };
@@ -94,7 +97,7 @@ export function ShipmentMap({
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
     if (!mapboxgl.accessToken) {
-      setError('Mapbox token not configured');
+      setError('Map service not configured');
       setLoading(false);
       return;
     }
@@ -126,71 +129,85 @@ export function ShipmentMap({
           return;
         }
 
-        // Create map
+        // Create map with minimal, professional style
         const newMap = new mapboxgl.Map({
           container: mapContainer.current!,
-          style: 'mapbox://styles/mapbox/light-v11',
+          style: 'mapbox://styles/mapbox/light-v11', // Clean, minimal style
           center: pickupCoords,
           zoom: 4,
+          attributionControl: false,
         });
+
+        // Add professional controls
+        newMap.addControl(new mapboxgl.NavigationControl({
+          showCompass: false
+        }), 'top-right');
 
         // Add pickup marker (blue)
         const pickupMarkerEl = document.createElement('div');
-        pickupMarkerEl.className = 'pickup-marker';
         pickupMarkerEl.innerHTML = `
           <div style="
-            width: 40px;
-            height: 40px;
-            background: #3B82F6;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
             border: 4px solid white;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
           ">
-            <div style="transform: rotate(45deg); color: white; font-size: 20px;">📦</div>
+            <div style="transform: rotate(45deg); color: white; font-size: 24px; font-weight: bold;">📦</div>
           </div>
         `;
 
         new mapboxgl.Marker({ element: pickupMarkerEl })
           .setLngLat(pickupCoords)
           .setPopup(
-            new mapboxgl.Popup({ offset: 25 })
-              .setHTML(`<div style="padding: 8px;"><strong>Pickup Location</strong><br/>${pickupCity}, ${pickupState}</div>`)
+            new mapboxgl.Popup({ offset: 30, className: 'custom-popup' })
+              .setHTML(`
+                <div style="padding: 12px; min-width: 200px;">
+                  <strong style="font-size: 14px; color: #0F172A;">Pickup Location</strong>
+                  <p style="margin: 4px 0 0 0; color: #64748B; font-size: 13px;">${pickupCity}, ${pickupState}</p>
+                </div>
+              `)
           )
           .addTo(newMap);
 
-        // Add delivery marker (green)
+        // Add delivery marker (green/emerald)
         const deliveryMarkerEl = document.createElement('div');
-        deliveryMarkerEl.className = 'delivery-marker';
         deliveryMarkerEl.innerHTML = `
           <div style="
-            width: 40px;
-            height: 40px;
-            background: ${progress === 100 ? '#059669' : '#22C55E'};
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, ${progress === 100 ? '#059669' : '#22C55E'}, ${progress === 100 ? '#047857' : '#16A34A'});
             border: 4px solid white;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
           ">
-            <div style="transform: rotate(45deg); color: white; font-size: 20px;">📍</div>
+            <div style="transform: rotate(45deg); color: white; font-size: 24px; font-weight: bold;">📍</div>
           </div>
         `;
 
         new mapboxgl.Marker({ element: deliveryMarkerEl })
           .setLngLat(deliveryCoords)
           .setPopup(
-            new mapboxgl.Popup({ offset: 25 })
-              .setHTML(`<div style="padding: 8px;"><strong>Delivery Location</strong><br/>${deliveryCity}, ${deliveryState}</div>`)
+            new mapboxgl.Popup({ offset: 30, className: 'custom-popup' })
+              .setHTML(`
+                <div style="padding: 12px; min-width: 200px;">
+                  <strong style="font-size: 14px; color: #0F172A;">Delivery Location</strong>
+                  <p style="margin: 4px 0 0 0; color: #64748B; font-size: 13px;">${deliveryCity}, ${deliveryState}</p>
+                </div>
+              `)
           )
           .addTo(newMap);
 
-        // Add route line
+        // Add professional route line
         newMap.on('load', () => {
           newMap.addSource('route', {
             type: 'geojson',
@@ -204,6 +221,24 @@ export function ShipmentMap({
             }
           });
 
+          // Shadow layer for depth
+          newMap.addLayer({
+            id: 'route-shadow',
+            type: 'line',
+            source: 'route',
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round'
+            },
+            paint: {
+              'line-color': '#000000',
+              'line-width': 8,
+              'line-opacity': 0.15,
+              'line-blur': 4
+            }
+          });
+
+          // Main route line
           newMap.addLayer({
             id: 'route',
             type: 'line',
@@ -214,14 +249,17 @@ export function ShipmentMap({
             },
             paint: {
               'line-color': statusColor,
-              'line-width': 4,
-              'line-opacity': 0.8
+              'line-width': 6,
+              'line-opacity': 0.9
             }
           });
 
-          // Fit bounds to show entire route
+          // Fit bounds to show entire route with padding
           const bounds = new mapboxgl.LngLatBounds(pickupCoords, deliveryCoords);
-          newMap.fitBounds(bounds, { padding: 100 });
+          newMap.fitBounds(bounds, { 
+            padding: { top: 80, bottom: 80, left: 80, right: 80 },
+            maxZoom: 8
+          });
 
           setMapReady(true);
           setLoading(false);
@@ -250,7 +288,7 @@ export function ShipmentMap({
 
     const updateVehiclePosition = async () => {
       try {
-        // Geocode pickup and delivery again for coordinates
+        // Geocode pickup and delivery for coordinates
         const pickupQuery = `${pickupCity}, ${pickupState}, USA`;
         const pickupResponse = await fetch(
           `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(pickupQuery)}.json?access_token=${mapboxgl.accessToken}`
@@ -279,37 +317,37 @@ export function ShipmentMap({
           vehicleMarker.current.remove();
         }
 
-        // Add vehicle marker
+        // Add vehicle marker with professional styling
         const vehicleMarkerEl = document.createElement('div');
         vehicleMarkerEl.innerHTML = `
           <div style="
             position: relative;
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             display: flex;
             align-items: center;
             justify-content: center;
           ">
             <div style="
               position: absolute;
-              width: 60px;
-              height: 60px;
+              width: 80px;
+              height: 80px;
               background: ${statusColor};
-              opacity: 0.2;
+              opacity: 0.15;
               border-radius: 50%;
-              animation: pulse 2s ease-out infinite;
+              animation: pulse-ring 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
             "></div>
             <div style="
-              width: 50px;
-              height: 50px;
-              background: ${statusColor};
-              border: 4px solid white;
+              width: 64px;
+              height: 64px;
+              background: linear-gradient(135deg, ${statusColor}, ${statusColor}dd);
+              border: 5px solid white;
               border-radius: 50%;
-              box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+              box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.1);
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 28px;
+              font-size: 32px;
               z-index: 1;
             ">
               ${vehicleEmoji}
@@ -317,11 +355,24 @@ export function ShipmentMap({
           </div>
         `;
 
-        vehicleMarker.current = new mapboxgl.Marker({ element: vehicleMarkerEl })
+        vehicleMarker.current = new mapboxgl.Marker({ 
+          element: vehicleMarkerEl,
+          anchor: 'center'
+        })
           .setLngLat(vehiclePosition)
           .setPopup(
-            new mapboxgl.Popup({ offset: 25 })
-              .setHTML(`<div style="padding: 8px;"><strong>${formatStatus(currentStatus)}</strong><br/>${progress}% Complete</div>`)
+            new mapboxgl.Popup({ offset: 40, className: 'custom-popup' })
+              .setHTML(`
+                <div style="padding: 12px; min-width: 200px;">
+                  <strong style="font-size: 14px; color: #0F172A;">${formatStatus(currentStatus)}</strong>
+                  <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px;">
+                    <div style="flex: 1; height: 8px; background: #E5E7EB; border-radius: 999px; overflow: hidden;">
+                      <div style="height: 100%; background: ${statusColor}; width: ${progress}%; transition: width 0.5s;"></div>
+                    </div>
+                    <span style="font-size: 13px; font-weight: 600; color: ${statusColor};">${progress}%</span>
+                  </div>
+                </div>
+              `)
           )
           .addTo(map.current);
 
@@ -369,16 +420,18 @@ export function ShipmentMap({
 
   return (
     <div className="space-y-4">
-      <Card className="border-2">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
+      <Card className="border-2 overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-primary/5 via-primary/3 to-accent/5">
           <CardTitle className="flex items-center justify-between gap-2 text-xl">
             <div className="flex items-center gap-2">
-              <Navigation className="h-5 w-5 text-primary" />
-              Live Shipment Tracking
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Navigation className="h-5 w-5 text-primary" />
+              </div>
+              <span>Live Shipment Tracking</span>
             </div>
             <Badge 
               style={{ backgroundColor: statusColor, color: 'white' }}
-              className="border-0 px-4 py-1.5 text-sm font-semibold shadow-md"
+              className="border-0 px-4 py-1.5 text-sm font-semibold shadow-lg"
             >
               {progress}% Complete
             </Badge>
@@ -386,64 +439,89 @@ export function ShipmentMap({
         </CardHeader>
         <CardContent className="p-0 relative">
           {loading && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/90 backdrop-blur-sm">
               <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm font-medium text-muted-foreground">Loading map...</p>
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+                <p className="text-sm font-medium text-muted-foreground">Loading tracking map...</p>
               </div>
             </div>
           )}
           <div 
             ref={mapContainer} 
-            className="w-full h-[500px] rounded-b-lg"
-            style={{ minHeight: '500px' }}
+            className="w-full h-[550px]"
+            style={{ minHeight: '550px' }}
           />
         </CardContent>
       </Card>
 
-      {/* Route Information */}
+      {/* Route Information Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-blue-200 bg-blue-50/50">
-          <div className="p-2 rounded-lg bg-blue-100">
-            <MapPin className="h-5 w-5 text-blue-600" />
+        <div className="group flex items-center gap-4 p-5 rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50 hover:shadow-lg transition-all duration-300">
+          <div className="p-3 rounded-xl bg-blue-100 group-hover:bg-blue-200 transition-colors">
+            <MapPin className="h-6 w-6 text-blue-600" />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground font-medium">Origin</p>
-            <p className="font-bold">{pickupCity}, {pickupState}</p>
+            <p className="text-xs text-blue-600 font-semibold mb-0.5">ORIGIN</p>
+            <p className="font-bold text-lg text-blue-900">{pickupCity}, {pickupState}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-primary-200 bg-primary-50/50">
-          <div className="p-2 rounded-lg" style={{ backgroundColor: `${statusColor}20` }}>
-            <Package className="h-5 w-5" style={{ color: statusColor }} />
+        <div className="group flex items-center gap-4 p-5 rounded-xl border-2 bg-gradient-to-br hover:shadow-lg transition-all duration-300" 
+             style={{ 
+               borderColor: `${statusColor}40`,
+               background: `linear-gradient(135deg, ${statusColor}08, ${statusColor}15)`
+             }}>
+          <div className="p-3 rounded-xl transition-colors" 
+               style={{ backgroundColor: `${statusColor}20` }}>
+            <Package className="h-6 w-6" style={{ color: statusColor }} />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground font-medium">Status</p>
-            <p className="font-bold">{formatStatus(currentStatus)}</p>
+            <p className="text-xs font-semibold mb-0.5" style={{ color: statusColor }}>STATUS</p>
+            <p className="font-bold text-lg" style={{ color: statusColor }}>{formatStatus(currentStatus)}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 p-4 rounded-xl border-2 border-green-200 bg-green-50/50">
-          <div className="p-2 rounded-lg bg-green-100">
-            <Navigation className="h-5 w-5 text-green-600" />
+        <div className="group flex items-center gap-4 p-5 rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-green-100/50 hover:shadow-lg transition-all duration-300">
+          <div className="p-3 rounded-xl bg-green-100 group-hover:bg-green-200 transition-colors">
+            <Navigation className="h-6 w-6 text-green-600" />
           </div>
           <div>
-            <p className="text-xs text-muted-foreground font-medium">Destination</p>
-            <p className="font-bold">{deliveryCity}, {deliveryState}</p>
+            <p className="text-xs text-green-600 font-semibold mb-0.5">DESTINATION</p>
+            <p className="font-bold text-lg text-green-900">{deliveryCity}, {deliveryState}</p>
           </div>
         </div>
       </div>
 
       <style jsx global>{`
-        @keyframes pulse {
+        @keyframes pulse-ring {
           0%, 100% {
             transform: scale(1);
-            opacity: 0.2;
+            opacity: 0.15;
           }
           50% {
-            transform: scale(1.2);
+            transform: scale(1.3);
             opacity: 0;
           }
+        }
+        
+        .mapboxgl-popup-content {
+          padding: 0 !important;
+          border-radius: 12px !important;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.15) !important;
+        }
+        
+        .mapboxgl-popup-tip {
+          display: none !important;
+        }
+        
+        .mapboxgl-ctrl-group {
+          border-radius: 8px !important;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        }
+        
+        .mapboxgl-ctrl-group button {
+          width: 36px !important;
+          height: 36px !important;
         }
       `}</style>
     </div>
