@@ -153,7 +153,7 @@ export async function processDelayedShipments(): Promise<{
         // Create in-app notification for customer
         const notificationResult = await createNotification({
           userId: shipment.customer_id,
-          type: 'shipment_delayed',
+          type: 'shipment_delayed' as const,
           title: 'Shipment Delayed',
           message: `Your shipment ${shipment.tracking_number} has been delayed by ${shipment.delay_duration_hours} hours. We apologize for the inconvenience and are working to resolve this.`,
           shipmentId: shipment.id,
@@ -185,7 +185,7 @@ export async function processDelayedShipments(): Promise<{
           for (const admin of adminUsers) {
             await createNotification({
               userId: admin.user_id,
-              type: 'shipment_delayed',
+              type: 'shipment_delayed' as const,
               title: 'Shipment Delay Alert',
               message: `Shipment ${shipment.tracking_number} is delayed by ${shipment.delay_duration_hours}h. Customer: ${shipment.customer_name}`,
               shipmentId: shipment.id,
@@ -320,7 +320,7 @@ export async function triggerDelayNotification(shipmentId: string): Promise<{
     // Create notification
     await createNotification({
       userId: shipment.customer_id,
-      type: 'shipment_delayed',
+      type: 'shipment_delayed' as const,
       title: 'Shipment Delayed',
       message: `Your shipment ${shipment.tracking_number} has been delayed by ${delayHours} hours. We apologize for the inconvenience.`,
       shipmentId: shipment.id,
