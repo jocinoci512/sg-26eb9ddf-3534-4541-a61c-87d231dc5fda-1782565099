@@ -320,37 +320,39 @@ export default function TrackingPage() {
               <CardHeader className="bg-gradient-to-r from-primary/5 to-accent/5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-2xl mb-2">Tracking Details</CardTitle>
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-lg font-bold text-primary">
+                    <CardTitle className="text-xl md:text-2xl mb-2">Tracking Details</CardTitle>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <span className="font-mono text-base md:text-lg font-bold text-primary break-all">
                         {shipment.tracking_number}
                       </span>
-                      <Badge className={`${getStatusColor(shipment.status)} bg-transparent border-current`}>
+                      <Badge className={`${getStatusColor(shipment.status)} bg-transparent border-current w-fit`}>
                         {formatStatus(shipment.status)}
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={handlePrint}
+                      className="w-full sm:w-auto h-10 md:h-9"
                     >
                       <Printer className="w-4 h-4 mr-2" />
-                      Print
+                      <span className="text-sm">Print</span>
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={handleDownloadPDF}
                       disabled={downloadingPDF}
+                      className="w-full sm:w-auto h-10 md:h-9"
                     >
                       {downloadingPDF ? (
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       ) : (
                         <Download className="w-4 h-4 mr-2" />
                       )}
-                      Download PDF
+                      <span className="text-sm">Download PDF</span>
                     </Button>
                   </div>
                 </div>
@@ -359,30 +361,30 @@ export default function TrackingPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
-                      <h3 className="font-bold text-sm text-muted-foreground mb-2">Pickup Location</h3>
-                      <div className="flex items-start gap-3">
+                      <h3 className="font-bold text-xs md:text-sm text-muted-foreground mb-2 uppercase tracking-wide">Pickup Location</h3>
+                      <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                         <MapPin className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm md:text-base break-words">
                             {shipment.pickup_address_line1}
                             {shipment.pickup_address_line2 && `, ${shipment.pickup_address_line2}`}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs md:text-sm text-muted-foreground mt-1">
                             {shipment.pickup_city}, {shipment.pickup_state} {shipment.pickup_zip_code}
                           </p>
                         </div>
                       </div>
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm text-muted-foreground mb-2">Delivery Location</h3>
-                      <div className="flex items-start gap-3">
+                      <h3 className="font-bold text-xs md:text-sm text-muted-foreground mb-2 uppercase tracking-wide">Delivery Location</h3>
+                      <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
                         <MapPin className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="font-medium">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm md:text-base break-words">
                             {shipment.delivery_address_line1}
                             {shipment.delivery_address_line2 && `, ${shipment.delivery_address_line2}`}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs md:text-sm text-muted-foreground mt-1">
                             {shipment.delivery_city}, {shipment.delivery_state} {shipment.delivery_zip_code}
                           </p>
                         </div>
@@ -393,10 +395,10 @@ export default function TrackingPage() {
                   <div className="space-y-4">
                     {shipment.estimated_delivery_date && (
                       <div>
-                        <h3 className="font-bold text-sm text-muted-foreground mb-2">Estimated Delivery</h3>
-                        <div className="flex items-center gap-3">
-                          <Calendar className="w-5 h-5 text-primary" />
-                          <p className="font-medium">
+                        <h3 className="font-bold text-xs md:text-sm text-muted-foreground mb-2 uppercase tracking-wide">Estimated Delivery</h3>
+                        <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                          <Calendar className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                          <p className="font-medium text-sm md:text-base">
                             {new Date(shipment.estimated_delivery_date).toLocaleDateString('en-US', {
                               weekday: 'long',
                               year: 'numeric',
@@ -408,10 +410,10 @@ export default function TrackingPage() {
                       </div>
                     )}
                     <div>
-                      <h3 className="font-bold text-sm text-muted-foreground mb-2">Shipment Type</h3>
-                      <div className="flex items-center gap-3">
-                        <Truck className="w-5 h-5 text-accent" />
-                        <p className="font-medium capitalize">{shipment.shipment_type?.replace('_', ' ')}</p>
+                      <h3 className="font-bold text-xs md:text-sm text-muted-foreground mb-2 uppercase tracking-wide">Shipment Type</h3>
+                      <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Truck className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+                        <p className="font-medium text-sm md:text-base capitalize">{shipment.shipment_type?.replace('_', ' ')}</p>
                       </div>
                     </div>
                   </div>
@@ -421,24 +423,24 @@ export default function TrackingPage() {
                   <>
                     <Separator className="my-6" />
                     <div>
-                      <h3 className="font-bold text-lg mb-4">Vehicle Information</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="p-3 bg-muted rounded-lg">
-                          <p className="text-xs text-muted-foreground mb-1">Make</p>
-                          <p className="font-semibold">{shipment.vehicles.make}</p>
+                      <h3 className="font-bold text-base md:text-lg mb-4">Vehicle Information</h3>
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+                        <div className="p-3 md:p-4 bg-muted rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Make</p>
+                          <p className="font-semibold text-sm md:text-base">{shipment.vehicles.make}</p>
                         </div>
-                        <div className="p-3 bg-muted rounded-lg">
-                          <p className="text-xs text-muted-foreground mb-1">Model</p>
-                          <p className="font-semibold">{shipment.vehicles.model}</p>
+                        <div className="p-3 md:p-4 bg-muted rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Model</p>
+                          <p className="font-semibold text-sm md:text-base">{shipment.vehicles.model}</p>
                         </div>
-                        <div className="p-3 bg-muted rounded-lg">
-                          <p className="text-xs text-muted-foreground mb-1">Year</p>
-                          <p className="font-semibold">{shipment.vehicles.year}</p>
+                        <div className="p-3 md:p-4 bg-muted rounded-lg">
+                          <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Year</p>
+                          <p className="font-semibold text-sm md:text-base">{shipment.vehicles.year}</p>
                         </div>
                         {shipment.vehicles.color && (
-                          <div className="p-3 bg-muted rounded-lg">
-                            <p className="text-xs text-muted-foreground mb-1">Color</p>
-                            <p className="font-semibold">{shipment.vehicles.color}</p>
+                          <div className="p-3 md:p-4 bg-muted rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide">Color</p>
+                            <p className="font-semibold text-sm md:text-base">{shipment.vehicles.color}</p>
                           </div>
                         )}
                       </div>
@@ -451,7 +453,7 @@ export default function TrackingPage() {
             {/* Email Subscription Card */}
             <Card className="animate-fade-up [animation-delay:50ms] border-2 border-primary/20">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Bell className="w-5 h-5 text-primary" />
                   </div>
@@ -460,34 +462,34 @@ export default function TrackingPage() {
               </CardHeader>
               <CardContent>
                 {isSubscribed ? (
-                  <div className="flex items-center gap-4 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 bg-green-50 border-2 border-green-200 rounded-lg">
                     <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
-                    <div className="flex-1">
-                      <p className="font-semibold text-green-900">You're subscribed!</p>
-                      <p className="text-sm text-green-700">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-green-900 text-sm md:text-base">You're subscribed!</p>
+                      <p className="text-xs md:text-sm text-green-700 break-words mt-1">
                         Updates will be sent to: <span className="font-medium">{subscribeEmail}</span>
                       </p>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <p className="text-muted-foreground">
+                    <p className="text-sm md:text-base text-muted-foreground">
                       Enter your email to receive automatic notifications about this shipment's status changes.
                     </p>
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <Input
                         type="email"
                         placeholder="your.email@example.com"
                         value={subscribeEmail}
                         onChange={(e) => setSubscribeEmail(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSubscribe()}
-                        className="flex-1"
+                        className="flex-1 h-11 md:h-10 text-base md:text-sm"
                         disabled={subscribing}
                       />
                       <Button
                         onClick={handleSubscribe}
                         disabled={subscribing}
-                        className="px-6"
+                        className="px-6 h-11 md:h-10 w-full sm:w-auto text-base md:text-sm"
                       >
                         {subscribing ? (
                           <>
@@ -514,26 +516,26 @@ export default function TrackingPage() {
             {documents.length > 0 && (
               <Card className="animate-fade-up [animation-delay:100ms]">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
                     <FileText className="w-5 h-5 text-primary" />
                     Shipment Documents
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid gap-3 md:gap-4">
                     {documents.map((doc) => {
                       const DocIcon = getDocumentIcon(doc.document_type);
                       return (
                         <div
                           key={doc.id}
-                          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors border"
+                          className="flex items-center justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted transition-colors border min-h-[68px]"
                         >
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-primary/10">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
                               <DocIcon className="w-5 h-5 text-primary" />
                             </div>
-                            <div>
-                              <p className="font-semibold text-sm">{doc.file_name || formatStatus(doc.document_type)}</p>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-sm md:text-base truncate">{doc.file_name || formatStatus(doc.document_type)}</p>
                               <p className="text-xs text-muted-foreground">
                                 {new Date(doc.created_at).toLocaleDateString()}
                               </p>
@@ -543,6 +545,7 @@ export default function TrackingPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => window.open(doc.file_url, '_blank')}
+                            className="h-10 w-10 md:h-9 md:w-9 flex-shrink-0 ml-2"
                           >
                             <Download className="w-4 h-4" />
                           </Button>

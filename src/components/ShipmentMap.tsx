@@ -3,7 +3,8 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Package, Navigation, Loader2, AlertCircle } from 'lucide-react';
+import { MapPin, Package, Navigation, Loader2, AlertCircle, Navigation2, Layers } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
@@ -79,8 +80,8 @@ export function ShipmentMap({
   pickupState, 
   deliveryCity, 
   deliveryState, 
-  currentStatus,
-  shipmentType = 'truck'
+  currentStatus = 'in_transit',
+  shipmentType = 'ground'
 }: ShipmentMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
@@ -88,6 +89,8 @@ export function ShipmentMap({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [mapStyle, setMapStyle] = useState<string>('mapbox://styles/mapbox/light-v11');
 
   const progress = getProgressFromStatus(currentStatus);
   const vehicleEmoji = getVehicleIcon(shipmentType);
@@ -96,191 +99,216 @@ export function ShipmentMap({
   // Initialize map once
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
-    if (!mapboxgl.accessToken) {
-      setError('Map service not configured');
-      setLoading(false);
-      return;
-    }
 
-    const initMap = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    try {
+      mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 
-        // Geocode pickup location
-        const pickupQuery = `${pickupCity}, ${pickupState}, USA`;
-        const pickupResponse = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(pickupQuery)}.json?access_token=${mapboxgl.accessToken}`
-        );
-        const pickupData = await pickupResponse.json();
-        const pickupCoords = pickupData.features?.[0]?.center;
-
-        // Geocode delivery location
-        const deliveryQuery = `${deliveryCity}, ${deliveryState}, USA`;
-        const deliveryResponse = await fetch(
-          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(deliveryQuery)}.json?access_token=${mapboxgl.accessToken}`
-        );
-        const deliveryData = await deliveryResponse.json();
-        const deliveryCoords = deliveryData.features?.[0]?.center;
-
-        if (!pickupCoords || !deliveryCoords) {
-          setError('Could not locate addresses on map');
-          setLoading(false);
-          return;
-        }
-
-        // Create map with minimal, professional style
-        const newMap = new mapboxgl.Map({
-          container: mapContainer.current!,
-          style: 'mapbox://styles/mapbox/light-v11', // Clean minimal style without heavy labels
-          center: pickupCoords,
-          zoom: 4,
-          attributionControl: false,
-        });
-
-        // Add professional controls
-        newMap.addControl(new mapboxgl.NavigationControl({
-          showCompass: false
-        }), 'top-right');
-
-        // Add pickup marker (blue)
-        const pickupMarkerEl = document.createElement('div');
-        pickupMarkerEl.innerHTML = `
-          <div style="
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, #3B82F6, #2563EB);
-            border: 4px solid white;
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
-            <div style="transform: rotate(45deg); color: white; font-size: 24px; font-weight: bold;">📦</div>
-          </div>
-        `;
-
-        new mapboxgl.Marker({ element: pickupMarkerEl })
-          .setLngLat(pickupCoords)
-          .setPopup(
-            new mapboxgl.Popup({ offset: 30, className: 'custom-popup' })
-              .setHTML(`
-                <div style="padding: 12px; min-width: 200px;">
-                  <strong style="font-size: 14px; color: #0F172A;">Pickup Location</strong>
-                  <p style="margin: 4px 0 0 0; color: #64748B; font-size: 13px;">${pickupCity}, ${pickupState}</p>
-                </div>
-              `)
-          )
-          .addTo(newMap);
-
-        // Add delivery marker (green/emerald)
-        const deliveryMarkerEl = document.createElement('div');
-        deliveryMarkerEl.innerHTML = `
-          <div style="
-            width: 50px;
-            height: 50px;
-            background: linear-gradient(135deg, ${progress === 100 ? '#059669' : '#22C55E'}, ${progress === 100 ? '#047857' : '#16A34A'});
-            border: 4px solid white;
-            border-radius: 50% 50% 50% 0;
-            transform: rotate(-45deg);
-            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
-            <div style="transform: rotate(45deg); color: white; font-size: 24px; font-weight: bold;">📍</div>
-          </div>
-        `;
-
-        new mapboxgl.Marker({ element: deliveryMarkerEl })
-          .setLngLat(deliveryCoords)
-          .setPopup(
-            new mapboxgl.Popup({ offset: 30, className: 'custom-popup' })
-              .setHTML(`
-                <div style="padding: 12px; min-width: 200px;">
-                  <strong style="font-size: 14px; color: #0F172A;">Delivery Location</strong>
-                  <p style="margin: 4px 0 0 0; color: #64748B; font-size: 13px;">${deliveryCity}, ${deliveryState}</p>
-                </div>
-              `)
-          )
-          .addTo(newMap);
-
-        // Add professional route line
-        newMap.on('load', () => {
-          newMap.addSource('route', {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              properties: {},
-              geometry: {
-                type: 'LineString',
-                coordinates: [pickupCoords, deliveryCoords]
-              }
-            }
-          });
-
-          // Shadow layer for depth
-          newMap.addLayer({
-            id: 'route-shadow',
-            type: 'line',
-            source: 'route',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#000000',
-              'line-width': 8,
-              'line-opacity': 0.15,
-              'line-blur': 4
-            }
-          });
-
-          // Main route line
-          newMap.addLayer({
-            id: 'route',
-            type: 'line',
-            source: 'route',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': statusColor,
-              'line-width': 6,
-              'line-opacity': 0.9
-            }
-          });
-
-          // Fit bounds to show entire route with padding
-          const bounds = new mapboxgl.LngLatBounds(pickupCoords, deliveryCoords);
-          newMap.fitBounds(bounds, { 
-            padding: { top: 80, bottom: 80, left: 80, right: 80 },
-            maxZoom: 8
-          });
-
-          setMapReady(true);
-          setLoading(false);
-        });
-
-        map.current = newMap;
-      } catch (err) {
-        console.error('Map initialization error:', err);
-        setError('Failed to load map');
+      if (!mapboxgl.accessToken) {
+        setError('Map configuration error');
         setLoading(false);
+        return;
       }
-    };
 
-    initMap();
+      const initMap = async () => {
+        try {
+          setLoading(true);
+          setError(null);
 
-    return () => {
-      vehicleMarker.current?.remove();
-      map.current?.remove();
+          // Geocode pickup location
+          const pickupQuery = `${pickupCity}, ${pickupState}, USA`;
+          const pickupResponse = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(pickupQuery)}.json?access_token=${mapboxgl.accessToken}`
+          );
+          const pickupData = await pickupResponse.json();
+          const pickupCoords = pickupData.features?.[0]?.center;
+
+          // Geocode delivery location
+          const deliveryQuery = `${deliveryCity}, ${deliveryState}, USA`;
+          const deliveryResponse = await fetch(
+            `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(deliveryQuery)}.json?access_token=${mapboxgl.accessToken}`
+          );
+          const deliveryData = await deliveryResponse.json();
+          const deliveryCoords = deliveryData.features?.[0]?.center;
+
+          if (!pickupCoords || !deliveryCoords) {
+            setError('Could not locate addresses on map');
+            setLoading(false);
+            return;
+          }
+
+          // Create map with selected style
+          const newMap = new mapboxgl.Map({
+            container: mapContainer.current!,
+            style: mapStyle,
+            center: pickupCoords,
+            zoom: 4,
+            attributionControl: false,
+          });
+
+          // Add professional controls
+          newMap.addControl(new mapboxgl.NavigationControl({
+            showCompass: false
+          }), 'top-right');
+
+          // Add pickup marker (blue)
+          const pickupMarkerEl = document.createElement('div');
+          pickupMarkerEl.innerHTML = `
+            <div style="
+              width: 50px;
+              height: 50px;
+              background: linear-gradient(135deg, #3B82F6, #2563EB);
+              border: 4px solid white;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <div style="transform: rotate(45deg); color: white; font-size: 24px; font-weight: bold;">📦</div>
+            </div>
+          `;
+
+          new mapboxgl.Marker({ element: pickupMarkerEl })
+            .setLngLat(pickupCoords)
+            .setPopup(
+              new mapboxgl.Popup({ offset: 30, className: 'custom-popup' })
+                .setHTML(`
+                  <div style="padding: 12px; min-width: 200px;">
+                    <strong style="font-size: 14px; color: #0F172A;">Pickup Location</strong>
+                    <p style="margin: 4px 0 0 0; color: #64748B; font-size: 13px;">${pickupCity}, ${pickupState}</p>
+                  </div>
+                `)
+            )
+            .addTo(newMap);
+
+          // Add delivery marker (green/emerald)
+          const deliveryMarkerEl = document.createElement('div');
+          deliveryMarkerEl.innerHTML = `
+            <div style="
+              width: 50px;
+              height: 50px;
+              background: linear-gradient(135deg, ${progress === 100 ? '#059669' : '#22C55E'}, ${progress === 100 ? '#047857' : '#16A34A'});
+              border: 4px solid white;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              box-shadow: 0 6px 20px rgba(34, 197, 94, 0.5);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <div style="transform: rotate(45deg); color: white; font-size: 24px; font-weight: bold;">📍</div>
+            </div>
+          `;
+
+          new mapboxgl.Marker({ element: deliveryMarkerEl })
+            .setLngLat(deliveryCoords)
+            .setPopup(
+              new mapboxgl.Popup({ offset: 30, className: 'custom-popup' })
+                .setHTML(`
+                  <div style="padding: 12px; min-width: 200px;">
+                    <strong style="font-size: 14px; color: #0F172A;">Delivery Location</strong>
+                    <p style="margin: 4px 0 0 0; color: #64748B; font-size: 13px;">${deliveryCity}, ${deliveryState}</p>
+                  </div>
+                `)
+            )
+            .addTo(newMap);
+
+          // Add professional route line
+          newMap.on('load', () => {
+            newMap.addSource('route', {
+              type: 'geojson',
+              data: {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                  type: 'LineString',
+                  coordinates: [pickupCoords, deliveryCoords]
+                }
+              }
+            });
+
+            // Shadow layer for depth
+            newMap.addLayer({
+              id: 'route-shadow',
+              type: 'line',
+              source: 'route',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+              },
+              paint: {
+                'line-color': '#000000',
+                'line-width': 8,
+                'line-opacity': 0.15,
+                'line-blur': 4
+              }
+            });
+
+            // Main route line
+            newMap.addLayer({
+              id: 'route',
+              type: 'line',
+              source: 'route',
+              layout: {
+                'line-join': 'round',
+                'line-cap': 'round'
+              },
+              paint: {
+                'line-color': statusColor,
+                'line-width': 6,
+                'line-opacity': 0.9
+              }
+            });
+
+            // Fit bounds to show entire route with padding
+            const bounds = new mapboxgl.LngLatBounds(pickupCoords, deliveryCoords);
+            newMap.fitBounds(bounds, { 
+              padding: { top: 80, bottom: 80, left: 80, right: 80 },
+              maxZoom: 8
+            });
+
+            setMapReady(true);
+            setLoading(false);
+          });
+
+          map.current = newMap;
+        } catch (err) {
+          console.error('Map initialization error:', err);
+          setError('Failed to load map');
+          setLoading(false);
+        }
+      };
+
+      initMap();
+
+      return () => {
+        if (map.current) {
+          map.current.remove();
+          map.current = null;
+        }
+      };
+    } catch (err) {
+      console.error('Map initialization error:', err);
+      setError('Failed to load map');
+      setLoading(false);
+    }
+  }, [pickupCity, pickupState, deliveryCity, deliveryState, currentStatus, shipmentType, mapStyle]);
+
+  const handleStyleChange = (style: string) => {
+    setMapStyle(style);
+    if (map.current) {
+      map.current.remove();
       map.current = null;
-    };
-  }, [pickupCity, pickupState, deliveryCity, deliveryState]);
+    }
+  };
+
+  const mapStyles = [
+    { name: 'Light', value: 'mapbox://styles/mapbox/light-v11', icon: '☀️' },
+    { name: 'Streets', value: 'mapbox://styles/mapbox/streets-v12', icon: '🗺️' },
+    { name: 'Satellite', value: 'mapbox://styles/mapbox/satellite-streets-v12', icon: '🛰️' },
+    { name: 'Outdoors', value: 'mapbox://styles/mapbox/outdoors-v12', icon: '🏔️' }
+  ];
 
   // Update vehicle position when progress changes
   useEffect(() => {
