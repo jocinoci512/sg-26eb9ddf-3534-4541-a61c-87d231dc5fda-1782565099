@@ -89,7 +89,6 @@ export function ShipmentMap({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [mapStyle, setMapStyle] = useState<string>('mapbox://styles/mapbox/light-v11');
 
   const progress = getProgressFromStatus(currentStatus);
